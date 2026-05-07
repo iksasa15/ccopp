@@ -1,0 +1,70 @@
+2026-05-07 23:11:51.706 | INFO     | intelligence.behavioral_baseline:_load:230 - No existing baseline. Starting fresh.
+2026-05-07 23:11:52.972 | INFO     | __main__:initialize:147 - Council system initialized
+2026-05-07 23:11:53.021 | WARNING  | tools.system_probe:warn_if_not_admin:53 - Not running as root. Limited process visibility on Linux.
+2026-05-07 23:11:53.571 | INFO     | core.council_graph:entry_node:90 - Council scan started: 2db29021-826d-4ae5-9332-8810c6ca3379
+2026-05-07 23:11:53.782 | ERROR    | agents.resource_warden:analyze_with_validation:161 - Resource Warden critical failure: '>' not supported between instances of 'NoneType' and 'int'
+Traceback (most recent call last):
+
+  File "/Users/ahmed/Downloads/council_of_agents_v2/run.py", line 473, in <module>
+    asyncio.run(main())
+    │       │   └ <function main at 0x10800c5e0>
+    │       └ <function run at 0x1058f5ee0>
+    └ <module 'asyncio' from '/Users/ahmed/.pyenv/versions/3.11.9/lib/python3.11/asyncio/__init__.py'>
+
+  File "/Users/ahmed/.pyenv/versions/3.11.9/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           │      │   └ <coroutine object main at 0x107c7a7a0>
+           │      └ <function Runner.run at 0x1059b0fe0>
+           └ <asyncio.runners.Runner object at 0x107d01590>
+  File "/Users/ahmed/.pyenv/versions/3.11.9/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           │    │     │                  └ <Task pending name='Task-1' coro=<main() running at /Users/ahmed/Downloads/council_of_agents_v2/run.py:454> wait_for=<Future ...
+           │    │     └ <function BaseEventLoop.run_until_complete at 0x1059aec00>
+           │    └ <_UnixSelectorEventLoop running=True closed=False debug=False>
+           └ <asyncio.runners.Runner object at 0x107d01590>
+  File "/Users/ahmed/.pyenv/versions/3.11.9/lib/python3.11/asyncio/base_events.py", line 641, in run_until_complete
+    self.run_forever()
+    │    └ <function BaseEventLoop.run_forever at 0x1059aeb60>
+    └ <_UnixSelectorEventLoop running=True closed=False debug=False>
+  File "/Users/ahmed/.pyenv/versions/3.11.9/lib/python3.11/asyncio/base_events.py", line 608, in run_forever
+    self._run_once()
+    │    └ <function BaseEventLoop._run_once at 0x1059b09a0>
+    └ <_UnixSelectorEventLoop running=True closed=False debug=False>
+  File "/Users/ahmed/.pyenv/versions/3.11.9/lib/python3.11/asyncio/base_events.py", line 1936, in _run_once
+    handle._run()
+    │      └ <function Handle._run at 0x1058f6840>
+    └ <Handle <TaskStepMethWrapper object at 0x10a2b21a0>()>
+  File "/Users/ahmed/.pyenv/versions/3.11.9/lib/python3.11/asyncio/events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+    │    │            │    │           │    └ <member '_args' of 'Handle' objects>
+    │    │            │    │           └ <Handle <TaskStepMethWrapper object at 0x10a2b21a0>()>
+    │    │            │    └ <member '_callback' of 'Handle' objects>
+    │    │            └ <Handle <TaskStepMethWrapper object at 0x10a2b21a0>()>
+    │    └ <member '_context' of 'Handle' objects>
+    └ <Handle <TaskStepMethWrapper object at 0x10a2b21a0>()>
+
+  File "/Users/ahmed/Downloads/council_of_agents_v2/core/council_graph.py", line 115, in resource_warden_node
+    report = await warden.analyze_with_validation(ctx)
+                   │      │                       └ ScanContext(scan_id='2db29021-826d-4ae5-9332-8810c6ca3379', started_at=datetime.datetime(2026, 5, 7, 20, 11, 53, 573039), tar...
+                   │      └ <function ResourceWarden.analyze_with_validation at 0x10a2b87c0>
+                   └ <agents.resource_warden.ResourceWarden object at 0x10a1b7910>
+
+> File "/Users/ahmed/Downloads/council_of_agents_v2/agents/resource_warden.py", line 130, in analyze_with_validation
+    candidates = self._pre_filter(snapshot)
+                 │    │           └ {'timestamp': '2026-05-07T20:11:53.573073', 'is_admin': False, 'system': {'platform': 'macOS-26.4.1-arm64-arm-64bit', 'hostna...
+                 │    └ <function ResourceWarden._pre_filter at 0x10a2ba5c0>
+                 └ <agents.resource_warden.ResourceWarden object at 0x10a1b7910>
+
+  File "/Users/ahmed/Downloads/council_of_agents_v2/agents/resource_warden.py", line 190, in _pre_filter
+    if proc.get("memory_percent", 0) > self.mem_threshold:
+       │    │                          │    └ 70
+       │    │                          └ <agents.resource_warden.ResourceWarden object at 0x10a1b7910>
+       │    └ <method 'get' of 'dict' objects>
+       └ {'num_threads': None, 'cmdline': '', 'name': 'kernel_task', 'ppid': 0, 'username': 'root', 'exe': None, 'pid': 0, 'status': '...
+
+TypeError: '>' not supported between instances of 'NoneType' and 'int'
+2026-05-07 23:11:53.788 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-07 23:11:53.788 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-07 23:11:53.789 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-07 23:11:53.804 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 557 baselines to data/baseline.json
+2026-05-07 23:11:53.813 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 557 baselines to data/baseline.json

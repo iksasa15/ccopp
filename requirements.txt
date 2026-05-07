@@ -21,7 +21,8 @@ numpy==1.26.4
 pandas==2.2.3
 
 # --- Persistence ---
-sqlalchemy==2.0.36
+# langchain-community 0.3.x pins SQLAlchemy<2.0.36; keep compatible patch here.
+sqlalchemy==2.0.35
 aiosqlite==0.20.0
 alembic==1.13.3
 

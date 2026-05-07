@@ -184,11 +184,13 @@ You MUST output valid JSON. No prose around it. No markdown fences. No exception
             if trust_verdict.impersonation_detected:
                 reasons.append("impersonation_detected")
 
-            # 3. Resource thresholds
-            if proc.get("cpu_percent", 0) > self.cpu_threshold:
-                reasons.append(f"high_cpu={proc['cpu_percent']}")
-            if proc.get("memory_percent", 0) > self.mem_threshold:
-                reasons.append(f"high_mem={proc['memory_percent']}")
+            # 3. Resource thresholds (psutil may emit None on some platforms/PIDs)
+            cpu_pct = proc.get("cpu_percent")
+            mem_pct = proc.get("memory_percent")
+            if (0 if cpu_pct is None else cpu_pct) > self.cpu_threshold:
+                reasons.append(f"high_cpu={cpu_pct}")
+            if (0 if mem_pct is None else mem_pct) > self.mem_threshold:
+                reasons.append(f"high_mem={mem_pct}")
 
             # 4. Suspicious command-line patterns
             cmdline = (proc.get("cmdline") or "").lower()
