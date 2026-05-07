@@ -1,0 +1,73 @@
+# ============================================================
+# Council of Agents v0.2 — Production-Ready Dependencies
+# Tested on: Windows 10/11, Python 3.11+
+# ============================================================
+
+# --- LLM & Agent Orchestration ---
+langgraph==0.2.45
+langchain==0.3.7
+langchain-ollama==0.2.0
+langchain-community==0.3.5
+ollama==0.3.3
+
+# --- Validation & Schema ---
+pydantic==2.9.2
+pydantic-settings==2.6.1
+
+# --- Knowledge Base & RAG ---
+chromadb==0.5.18
+sentence-transformers==3.2.1
+numpy==1.26.4
+pandas==2.2.3
+
+# --- Persistence ---
+sqlalchemy==2.0.36
+aiosqlite==0.20.0
+alembic==1.13.3
+
+# --- Cryptography ---
+cryptography==43.0.3
+
+# --- System Probing (Windows) ---
+psutil==6.1.0
+pywin32==308; sys_platform == 'win32'
+wmi==1.5.1; sys_platform == 'win32'
+
+# --- File & Malware Analysis ---
+yara-python==4.5.1
+pefile==2024.8.26
+python-magic-bin==0.4.14; sys_platform == 'win32'
+
+# --- Archive Inspection ---
+py7zr==0.22.0
+rarfile==4.2
+
+# --- Network Monitoring ---
+scapy==2.6.1
+dpkt==1.9.8
+
+# --- Backend API ---
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+websockets==13.1
+
+# --- Notifications ---
+win10toast==0.9; sys_platform == 'win32'
+
+# --- Configuration & Logging ---
+pyyaml==6.0.2
+python-dotenv==1.0.1
+jinja2==3.1.4
+loguru==0.7.2
+rich==13.9.4
+
+# --- Testing ---
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+httpx==0.27.2
+
+# --- Development ---
+black==24.10.0
+ruff==0.7.2
+mypy==1.13.0

@@ -1,0 +1,200 @@
+# ============================================================
+# Council of Agents — v0.2 Configuration
+# Production-ready settings for all subsystems.
+# ============================================================
+
+# --- Application metadata ---
+app:
+  name: "Council of Agents"
+  version: "0.2.0"
+  data_dir: "./data"
+  log_dir: "./logs"
+  language: "ar"  # ar | en
+
+# --- LLM Configuration ---
+llm:
+  ollama_url: "http://localhost:11434"
+  primary_model: "qwen2.5:7b-instruct-q5_K_M"
+  reasoning_model: "deepseek-r1:7b"
+  embedding_model: "nomic-embed-text"
+  
+  # Per-model overrides
+  models:
+    qwen2.5:7b-instruct-q5_K_M:
+      temperature: 0.2
+      num_ctx: 8192
+      num_predict: 1024
+    deepseek-r1:7b:
+      temperature: 0.4
+      num_ctx: 16384
+
+# --- Resilience (Circuit Breakers, Retry, Timeouts) ---
+resilience:
+  llm_circuit_breaker:
+    failure_threshold: 5
+    success_threshold: 2
+    timeout_seconds: 60
+  
+  llm_retry:
+    max_attempts: 3
+    base_delay_seconds: 1.0
+    max_delay_seconds: 30.0
+  
+  llm_call_timeout_seconds: 90
+  
+  bulkhead:
+    max_concurrent_llm_calls: 3
+    max_concurrent_yara_scans: 5
+
+# --- Validation ---
+validation:
+  enable_self_correction: true
+  max_correction_attempts: 2
+
+# --- Agents ---
+agents:
+  enabled:
+    - resource_warden
+    - cyber_analyst       # placeholder for next iteration
+    - traffic_observer    # placeholder for next iteration
+  
+  scan_interval_seconds: 30
+  
+  resource_warden:
+    cpu_threshold_percent: 75
+    memory_threshold_percent: 70
+    pre_filter_top_n: 5
+    enable_baseline: true
+  
+  arbitrator:
+    correlation_boost: 0.2
+    suppress_below_confidence: 0.4
+    max_iterations: 3
+
+# --- Trust Manager ---
+trust:
+  enable_signature_verification: true
+  trusted_publishers_extra: []  # user-added publishers
+  whitelist_file: "./data/whitelist_hashes.txt"
+
+# --- Behavioral Baseline ---
+baseline:
+  storage_path: "./data/baseline.json"
+  min_observations_for_mature: 50
+  min_days_for_mature: 5
+  prune_after_days: 90
+  observation_save_interval_minutes: 30
+
+# --- Reputation ---
+reputation:
+  db_path: "./data/reputation.db"
+
+# --- Archive Scanner ---
+archive_scanner:
+  max_compression_ratio: 100
+  max_uncompressed_size_mb: 500
+  max_file_count: 10000
+  max_nesting_depth: 3
+  
+  dangerous_extensions:
+    - .exe
+    - .scr
+    - .com
+    - .bat
+    - .cmd
+    - .vbs
+    - .js
+    - .jse
+    - .wsf
+    - .ps1
+    - .hta
+    - .lnk
+    - .msi
+    - .jar
+  
+  suspicious_patterns:
+    - autorun.inf
+    - desktop.ini
+    - thumbs.db
+
+# --- Quarantine ---
+quarantine:
+  directory: "./data/quarantine"
+  encryption: "AES-256-GCM"
+  secure_delete_passes: 2
+  retention_days: 30  # auto-delete after this period
+
+# --- Notifications ---
+notifications:
+  enabled: true
+  channels:
+    - toast
+    - in_app
+    - sound
+  
+  min_level_for_toast: "medium"
+  min_level_for_sound: "high"
+  min_level_for_immediate: "critical"
+  
+  throttle:
+    window_minutes: 15
+    max_per_window: 3
+  
+  quiet_hours:
+    enabled: true
+    start: "22:00"
+    end: "07:00"
+    override_for_critical: true
+  
+  digest:
+    interval_minutes: 60
+
+# --- Persistence ---
+database:
+  url: "sqlite+aiosqlite:///./data/council.db"
+  echo_sql: false
+  pool_size: 5
+
+# --- Audit Log ---
+audit:
+  enabled: true
+  verify_on_startup: true
+  alert_on_tampering: true
+
+# --- Knowledge Base ---
+knowledge:
+  vector_store_path: "./data/knowledge"
+  collection_name: "threat_intelligence"
+  rag:
+    top_k: 5
+    similarity_threshold: 0.75
+  datasets:
+    mitre_attack_path: "./data/datasets/mitre"
+    malware_bazaar_path: "./data/datasets/malware_bazaar"
+    cic_malmem_path: "./data/datasets/cic_malmem"
+
+# --- API Server ---
+api:
+  host: "127.0.0.1"  # local only by default
+  port: 8765
+  cors_origins: ["http://localhost:5173"]
+  websocket_path: "/ws"
+
+# --- Logging ---
+logging:
+  level: "INFO"
+  format: "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan> - <level>{message}</level>"
+  rotation: "10 MB"
+  retention: "30 days"
+  
+  # Log levels per module
+  module_levels:
+    "validation.validator": "DEBUG"
+    "resilience.primitives": "INFO"
+    "agents.arbitrator": "INFO"
+
+# --- Plugin Discovery ---
+plugins:
+  auto_discover_filesystem: true
+  auto_discover_entry_points: true
+  yaml_agents_file: "./config/yaml_agents.yaml"
