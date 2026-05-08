@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
-import { BrandLogo, StatusPill } from "./Brand";
+import { BrandLogo } from "./Brand";
 import "./App.css";
 
 type LoadStatus = "idle" | "loading" | "error";
-type MainTab = "home" | "council_coa";
+type Section = "dashboard" | "scan" | "council" | "coa" | "result";
 type JsonRecord = Record<string, unknown>;
 type ResultState =
   | { kind: "idle"; message: string }
@@ -18,6 +18,76 @@ function formatPrimitive(value: unknown): string {
   if (typeof value === "number") return value.toLocaleString("en-US");
   if (typeof value === "string") return value;
   return "بيانات مركبة";
+}
+
+function formatDuration(ms: number): string {
+  if (!ms || ms < 0) return "—";
+  if (ms < 1000) return `${ms} ms`;
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(1)} ث`;
+  const m = Math.floor(s / 60);
+  const rs = Math.floor(s % 60);
+  return `${m} د ${rs} ث`;
+}
+
+function formatTimestamp(ts: number): string {
+  if (!ts) return "—";
+  try {
+    return new Date(ts).toLocaleString("ar", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+    });
+  } catch {
+    return new Date(ts).toISOString();
+  }
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes && bytes !== 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+const HISTORY_KEY = "nexus_scan_history_v1";
+const HISTORY_MAX = 8;
+
+interface ScanHistoryEntry {
+  id: string;
+  startedAt: number;
+  finishedAt: number;
+  durationMs: number;
+  mode: "quick" | "deep" | "coa" | "other";
+  label: string;
+  ok: boolean;
+  totalThreats: number;
+  critical: number;
+  high: number;
+  score: number;
+  scanId?: string;
+}
+
+function loadHistory(): ScanHistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as ScanHistoryEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(entries: ScanHistoryEntry[]): void {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, HISTORY_MAX)));
+  } catch {
+    // ignore persistence errors
+  }
 }
 
 function severityClass(value: unknown): string {
@@ -49,17 +119,80 @@ function getKnownCoaHint(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
   const err = String((body as JsonRecord).error ?? "").toLowerCase();
   if (err.includes("run a scan first")) {
-    return "لا يوجد Scan سابق في COA. نفّذ أولاً: «فحص COA (POST /scan)» ثم أعد المحاولة.";
+    return "لا يوجد Scan سابق في COA. نفّذ أولاً «فحص COA» ثم أعد المحاولة.";
   }
   return null;
 }
 
+type NavId = Section;
+
+interface NavSpec {
+  id: NavId;
+  name: string;
+  icon: JSX.Element;
+}
+
+const NAV_ITEMS: NavSpec[] = [
+  {
+    id: "dashboard",
+    name: "لوحة المعلومات",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="9" rx="1" />
+        <rect x="14" y="3" width="7" height="5" rx="1" />
+        <rect x="14" y="12" width="7" height="9" rx="1" />
+        <rect x="3" y="16" width="7" height="5" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    id: "scan",
+    name: "فحص النظام",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+    ),
+  },
+  {
+    id: "council",
+    name: "أدوات Council",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z" />
+      </svg>
+    ),
+  },
+  {
+    id: "coa",
+    name: "أدوات COA",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M3 10h18M9 4v16" />
+      </svg>
+    ),
+  },
+  {
+    id: "result",
+    name: "النتيجة",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+        <path d="M5 8a2 2 0 0 1 2-2h7l5 5v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" />
+        <path d="M9 13h6M9 17h4" />
+      </svg>
+    ),
+  },
+];
+
 export default function App() {
-  const [mainTab, setMainTab] = useState<MainTab>("home");
+  const [section, setSection] = useState<Section>("dashboard");
   const [archivePath, setArchivePath] = useState("");
   const [result, setResult] = useState<ResultState>({
     kind: "idle",
-    message: "نفّذ فحصاً من الأعلى أو من تبويب Council + COA",
+    message: "ابدأ فحصاً من قسم «فحص النظام» لرؤية أحدث النتائج هنا.",
   });
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
@@ -71,13 +204,37 @@ export default function App() {
     useState<LlmConnectionState>("checking");
   const [coaLlmState, setCoaLlmState] = useState<LlmConnectionState>("checking");
 
+  const [scanMeta, setScanMeta] = useState<{
+    label: string;
+    mode: "quick" | "deep" | "coa" | "other";
+    startedAt: number;
+    finishedAt: number;
+  } | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [history, setHistory] = useState<ScanHistoryEntry[]>(() => loadHistory());
+
+  useEffect(() => {
+    if (loadStatus !== "loading" || !scanMeta) {
+      return;
+    }
+    const start = scanMeta.startedAt;
+    setElapsedMs(Date.now() - start);
+    const id = window.setInterval(() => {
+      setElapsedMs(Date.now() - start);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [loadStatus, scanMeta]);
+
   const ensureLlmReady = useCallback(
     async (target: "council" | "coa"): Promise<boolean> => {
       try {
         if (target === "coa") {
           const ollamaRes = await fetch("/coa-api/health/ollama");
           const ollamaBody = await parseJsonSafe(ollamaRes);
-          if (!ollamaRes.ok || (ollamaBody && typeof ollamaBody === "object" && (ollamaBody as JsonRecord).ok === false)) {
+          if (
+            !ollamaRes.ok ||
+            (ollamaBody && typeof ollamaBody === "object" && (ollamaBody as JsonRecord).ok === false)
+          ) {
             setLoadStatus("error");
             setLastError("LLM غير جاهزة في COA (Ollama).");
             setResult({
@@ -90,10 +247,12 @@ export default function App() {
             });
             return false;
           }
-
           const llmRes = await fetch("/coa-api/health/llm");
           const llmBody = await parseJsonSafe(llmRes);
-          if (!llmRes.ok || (llmBody && typeof llmBody === "object" && (llmBody as JsonRecord).ok === false)) {
+          if (
+            !llmRes.ok ||
+            (llmBody && typeof llmBody === "object" && (llmBody as JsonRecord).ok === false)
+          ) {
             setLoadStatus("error");
             setLastError("LLM غير جاهزة في COA.");
             setResult({
@@ -140,10 +299,7 @@ export default function App() {
         setLastError(msg);
         setResult({
           kind: "error",
-          data: {
-            error: "تعذر التحقق من جاهزية LLM",
-            details: msg,
-          },
+          data: { error: "تعذر التحقق من جاهزية LLM", details: msg },
         });
         return false;
       }
@@ -151,29 +307,55 @@ export default function App() {
     []
   );
 
-  const showResult = useCallback((data: unknown) => {
-    setResult((prev) => ({
-      kind: prev.kind === "error" ? "error" : "success",
-      data,
-    }));
-  }, []);
-
-  const resultEntries = useMemo(() => {
-    if (result.kind !== "success" && result.kind !== "error") return [];
-    if (!result.data || typeof result.data !== "object") return [];
-    return Object.entries(result.data as JsonRecord);
-  }, [result]);
-
-  const resultVariant =
-    result.kind === "error" ? "danger" : result.kind === "success" ? "ok" : "neutral";
+  const recordHistory = useCallback(
+    (
+      label: string,
+      mode: "quick" | "deep" | "coa" | "other",
+      startedAt: number,
+      finishedAt: number,
+      ok: boolean,
+      data: unknown
+    ) => {
+      const obj = (data && typeof data === "object" ? (data as JsonRecord) : {}) as JsonRecord;
+      const entry: ScanHistoryEntry = {
+        id: `${startedAt}-${Math.random().toString(36).slice(2, 8)}`,
+        startedAt,
+        finishedAt,
+        durationMs: Math.max(0, finishedAt - startedAt),
+        mode,
+        label,
+        ok,
+        totalThreats: Number(obj.total_threats ?? 0) || 0,
+        critical: Number(obj.critical ?? 0) || 0,
+        high: Number(obj.high ?? 0) || 0,
+        score: 0,
+        scanId: typeof obj.scan_id === "string" ? obj.scan_id : undefined,
+      };
+      const c = entry.critical;
+      const h = entry.high;
+      const m = Number(obj.medium ?? 0) || 0;
+      const l = Number(obj.low ?? 0) || 0;
+      entry.score = Math.min(100, c * 35 + h * 20 + m * 8 + l * 3);
+      setHistory((prev) => {
+        const next = [entry, ...prev].slice(0, HISTORY_MAX);
+        saveHistory(next);
+        return next;
+      });
+    },
+    []
+  );
 
   const runJson = useCallback(
     async (
       label: string,
       fn: () => Promise<Response>,
       hint?: string,
-      loadingMessage?: string
+      loadingMessage?: string,
+      mode: "quick" | "deep" | "coa" | "other" = "other"
     ) => {
+      const startedAt = Date.now();
+      setScanMeta({ label, mode, startedAt, finishedAt: 0 });
+      setElapsedMs(0);
       setLoadStatus("loading");
       setLastError(null);
       setResult({
@@ -183,6 +365,7 @@ export default function App() {
       try {
         const res = await fn();
         const body = await parseJsonSafe(res);
+        const finishedAt = Date.now();
         if (!res.ok) {
           setLoadStatus("error");
           const knownHint = getKnownCoaHint(body);
@@ -191,26 +374,34 @@ export default function App() {
             kind: "error",
             data: knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body,
           });
-          showResult(
-            knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body
-          );
+          setScanMeta({ label, mode, startedAt, finishedAt });
+          recordHistory(label, mode, startedAt, finishedAt, false, body);
+          setSection("result");
           return;
         }
         setLoadStatus("idle");
-        showResult(body);
+        setResult({ kind: "success", data: body });
+        setScanMeta({ label, mode, startedAt, finishedAt });
+        recordHistory(label, mode, startedAt, finishedAt, true, body);
+        setSection("result");
       } catch (e) {
+        const finishedAt = Date.now();
         setLoadStatus("error");
         const msg = e instanceof Error ? e.message : String(e);
         setLastError(msg);
-        showResult({
+        const data = {
           error: msg,
           hint:
             hint ??
             "تأكد: uvicorn على 8765، و COA Flask على 5050 (مثلاً bash scripts/start_merged.sh)",
-        });
+        };
+        setResult({ kind: "error", data });
+        setScanMeta({ label, mode, startedAt, finishedAt });
+        recordHistory(label, mode, startedAt, finishedAt, false, data);
+        setSection("result");
       }
     },
-    [showResult]
+    [recordHistory]
   );
 
   const runDownload = useCallback(
@@ -229,9 +420,7 @@ export default function App() {
             kind: "error",
             data: knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body,
           });
-          showResult(
-            knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body
-          );
+          setSection("result");
           return;
         }
         const blob = await res.blob();
@@ -244,21 +433,25 @@ export default function App() {
         a.click();
         URL.revokeObjectURL(a.href);
         setLoadStatus("idle");
-        showResult({
-          ok: true,
-          downloaded: name,
-          bytes: blob.size,
-          note: "تم بدء التنزيل في المتصفح",
+        setResult({
+          kind: "success",
+          data: {
+            ok: true,
+            downloaded: name,
+            bytes: blob.size,
+            note: "تم بدء التنزيل في المتصفح",
+          },
         });
+        setSection("result");
       } catch (e) {
         setLoadStatus("error");
         const msg = e instanceof Error ? e.message : String(e);
         setLastError(msg);
         setResult({ kind: "error", data: { error: msg } });
-        showResult({ error: msg });
+        setSection("result");
       }
     },
-    [showResult]
+    []
   );
 
   const refreshLlmConnectionStatus = useCallback(async () => {
@@ -308,87 +501,6 @@ export default function App() {
     return () => window.clearInterval(id);
   }, [refreshLlmConnectionStatus]);
 
-  const testLlmStatus = useCallback(async () => {
-    setLoadStatus("loading");
-    setLastError(null);
-    setResult({ kind: "loading", message: "جاري اختبار جاهزية LLM..." });
-
-    try {
-      const [integrationsRes, coaOllamaRes, coaLlmRes] = await Promise.all([
-        fetch("/api/integrations"),
-        fetch("/coa-api/health/ollama"),
-        fetch("/coa-api/health/llm"),
-      ]);
-
-      const [integrationsBody, coaOllamaBody, coaLlmBody] = await Promise.all([
-        parseJsonSafe(integrationsRes),
-        parseJsonSafe(coaOllamaRes),
-        parseJsonSafe(coaLlmRes),
-      ]);
-
-      const councilLlmOk =
-        integrationsRes.ok &&
-        integrationsBody &&
-        typeof integrationsBody === "object" &&
-        (integrationsBody as JsonRecord).council &&
-        typeof (integrationsBody as JsonRecord).council === "object" &&
-        ((integrationsBody as JsonRecord).council as JsonRecord).fastapi === true;
-
-      const coaOllamaOk =
-        coaOllamaRes.ok &&
-        coaOllamaBody &&
-        typeof coaOllamaBody === "object" &&
-        (coaOllamaBody as JsonRecord).ok !== false;
-
-      const coaLlmOk =
-        coaLlmRes.ok &&
-        coaLlmBody &&
-        typeof coaLlmBody === "object" &&
-        (coaLlmBody as JsonRecord).ok !== false;
-
-      const allOk = councilLlmOk && coaOllamaOk && coaLlmOk;
-      setCouncilLlmState(councilLlmOk ? "connected" : "disconnected");
-      setCoaLlmState(coaOllamaOk && coaLlmOk ? "connected" : "disconnected");
-      setLoadStatus(allOk ? "idle" : "error");
-      if (!allOk) {
-        setLastError("بعض خدمات LLM غير جاهزة.");
-      }
-      setResult({
-        kind: allOk ? "success" : "error",
-        data: {
-          council_llm: councilLlmOk ? "جاهز" : "غير جاهز",
-          coa_ollama: coaOllamaOk ? "جاهز" : "غير جاهز",
-          coa_llm: coaLlmOk ? "جاهز" : "غير جاهز",
-          integrations: integrationsBody,
-          coa_ollama_details: coaOllamaBody,
-          coa_llm_details: coaLlmBody,
-        },
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setLoadStatus("error");
-      setLastError(msg);
-      setCouncilLlmState("disconnected");
-      setCoaLlmState("disconnected");
-      setResult({
-        kind: "error",
-        data: { error: "تعذر اختبار LLM", details: msg },
-      });
-    }
-  }, []);
-
-  const llmPillKind = (state: LlmConnectionState): "ok" | "warn" | "danger" => {
-    if (state === "connected") return "ok";
-    if (state === "checking") return "warn";
-    return "danger";
-  };
-
-  const llmPillLabel = (prefix: string, state: LlmConnectionState): string => {
-    if (state === "connected") return `${prefix}: متصل`;
-    if (state === "checking") return `${prefix}: جارٍ التحقق`;
-    return `${prefix}: غير متصل`;
-  };
-
   const dashboardStats = useMemo(() => {
     if (result.kind !== "success" && result.kind !== "error") {
       return {
@@ -401,11 +513,9 @@ export default function App() {
         score: 0,
       };
     }
-
     const data = (result.data && typeof result.data === "object"
       ? (result.data as JsonRecord)
       : {}) as JsonRecord;
-
     const totalThreats = Number(data.total_threats ?? 0) || 0;
     const critical = Number(data.critical ?? 0) || 0;
     const high = Number(data.high ?? 0) || 0;
@@ -413,7 +523,6 @@ export default function App() {
     const low = Number(data.low ?? 0) || 0;
     const highConfidence = Number(data.high_confidence_threats ?? 0) || 0;
     const score = Math.min(100, critical * 35 + high * 20 + medium * 8 + low * 3);
-
     return { totalThreats, critical, high, medium, low, highConfidence, score };
   }, [result]);
 
@@ -426,15 +535,20 @@ export default function App() {
   }, [dashboardStats.score]);
 
   const startCouncilScan = useCallback(async () => {
+    const label =
+      councilScanMode === "deep"
+        ? "فحص النظام العميق (Council)"
+        : "فحص النظام السريع (Council)";
+    const startedAt = Date.now();
+    setScanMeta({ label, mode: councilScanMode, startedAt, finishedAt: 0 });
+    setElapsedMs(0);
     setLoadStatus("loading");
     setLastError(null);
     setResult({ kind: "loading", message: "جاري الفحص…" });
     const ready = await ensureLlmReady("council");
     if (!ready) return;
     await runJson(
-      councilScanMode === "deep"
-        ? "فحص النظام العميق (Council)"
-        : "فحص النظام السريع (Council)",
+      label,
       () =>
         fetch("/api/scan-system", {
           method: "POST",
@@ -442,379 +556,435 @@ export default function App() {
           body: JSON.stringify({ mode: councilScanMode }),
         }),
       undefined,
-      "جاري الفحص…"
+      "جاري الفحص…",
+      councilScanMode
     );
   }, [councilScanMode, ensureLlmReady, runJson]);
 
+  const startCoaScan = useCallback(async () => {
+    const label = "COA full scan";
+    const startedAt = Date.now();
+    setScanMeta({ label, mode: "coa", startedAt, finishedAt: 0 });
+    setElapsedMs(0);
+    setLoadStatus("loading");
+    setLastError(null);
+    setResult({ kind: "loading", message: "جاري الفحص…" });
+    const ready = await ensureLlmReady("coa");
+    if (!ready) return;
+    await runJson(
+      label,
+      () =>
+        fetch("/coa-api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dry_run: coaDryRun,
+            use_council: coaUseCouncil,
+          }),
+        }),
+      undefined,
+      "جاري الفحص…",
+      "coa"
+    );
+  }, [coaDryRun, coaUseCouncil, ensureLlmReady, runJson]);
+
+  const dotState = (s: LlmConnectionState): "ok" | "warn" | "danger" =>
+    s === "connected" ? "ok" : s === "checking" ? "warn" : "danger";
+  const dotLabel = (prefix: string, s: LlmConnectionState) =>
+    s === "connected"
+      ? `${prefix} متصل`
+      : s === "checking"
+        ? `${prefix} يفحص`
+        : `${prefix} مفصول`;
+
+  const resultEntries =
+    result.kind === "success" || result.kind === "error"
+      ? result.data && typeof result.data === "object"
+        ? Object.entries(result.data as JsonRecord)
+        : []
+      : [];
+  const resultVariant =
+    result.kind === "error" ? "danger" : result.kind === "success" ? "ok" : "neutral";
+
+  const scanStatusKind: "idle" | "loading" | "error" | "ok" =
+    result.kind === "loading"
+      ? "loading"
+      : result.kind === "error"
+        ? "error"
+        : result.kind === "success"
+          ? "ok"
+          : "idle";
+  const scanStatusText =
+    result.kind === "loading"
+      ? result.message
+      : result.kind === "success"
+        ? `اكتمل آخر فحص — ${dashboardStats.totalThreats} تهديد مكتشف`
+        : result.kind === "error"
+          ? "فشل آخر إجراء — راجع التفاصيل في «النتيجة»"
+          : "لم يبدأ فحص بعد";
+
   return (
-    <div className="app">
-      <header className="brand-bar brand-bar--v2">
-        <div className="brand-bar__left">
-          <BrandLogo size={56} />
-          <div className="brand-text">
-            <h1>
-              NEXUS SHIELD <span className="brand-sep">·</span> مركز الحماية الذكي
-            </h1>
-            <p className="brand-tag">
-              Cyber Defense Command · Unified AI Security Console
-            </p>
-          </div>
+    <div className="layout" lang="ar">
+      {/* —————————————————————— Top bar —————————————————————— */}
+      <header className="topbar">
+        <div className="topbar__brand">
+          <BrandLogo size={32} />
+          <h1 className="topbar__title">Nexus Shield</h1>
         </div>
-        <div className="brand-status" aria-label="خدمات المنصة">
-          <StatusPill kind="ok" label="FastAPI 8765" />
-          <StatusPill kind="ok" label="COA 5050" />
-          <StatusPill
-            kind={llmPillKind(councilLlmState)}
-            label={llmPillLabel("LLM Council", councilLlmState)}
-          />
-          <StatusPill
-            kind={llmPillKind(coaLlmState)}
-            label={llmPillLabel("LLM COA", coaLlmState)}
-          />
+        <div className="topbar__status">
+          <span
+            className="dot-pill"
+            data-state={dotState(councilLlmState)}
+            title={dotLabel("Council", councilLlmState)}
+          >
+            Council
+          </span>
+          <span
+            className="dot-pill"
+            data-state={dotState(coaLlmState)}
+            title={dotLabel("COA", coaLlmState)}
+          >
+            COA
+          </span>
         </div>
       </header>
 
-      <section className="hero-panel action-card">
-        <div className="hero-copy">
-          <p className="hero-kicker">جاهز خلال ثوانٍ</p>
-          <h2>ابدأ الفحص الآن من نفس الصفحة</h2>
-          <p>
-            اختر وضع الفحص ثم اضغط زر البدء. تم دمج الحالة، الفحص، والإحصائيات الأساسية
-            في واجهة واحدة لتكون أسرع وأسهل.
-          </p>
-        </div>
-        <div className="hero-actions">
-          <div className="scan-mode-switch" role="group" aria-label="وضع الفحص">
-            <button
-              type="button"
-              className={`scan-mode-btn ${councilScanMode === "quick" ? "active" : ""}`}
-              onClick={() => setCouncilScanMode("quick")}
-              disabled={loadStatus === "loading"}
-            >
-              فحص سريع
-            </button>
-            <button
-              type="button"
-              className={`scan-mode-btn ${councilScanMode === "deep" ? "active" : ""}`}
-              onClick={() => setCouncilScanMode("deep")}
-              disabled={loadStatus === "loading"}
-            >
-              فحص عميق (LLM + Agent)
-            </button>
-          </div>
+      {/* —————————————————————— Sidebar —————————————————————— */}
+      <aside className="sidebar">
+        <p className="sidebar__heading">SOC Console</p>
+        {NAV_ITEMS.map((item) => (
           <button
+            key={item.id}
             type="button"
-            className="btn primary btn-start"
-            disabled={loadStatus === "loading"}
-            onClick={startCouncilScan}
+            className={`nav-item ${section === item.id ? "active" : ""}`}
+            onClick={() => setSection(item.id)}
           >
-            {councilScanMode === "deep" ? "ابدأ الفحص العميق" : "ابدأ الفحص السريع"}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            disabled={loadStatus === "loading"}
-            onClick={testLlmStatus}
-          >
-            تحقق من جاهزية LLM
-          </button>
-        </div>
-      </section>
-
-      <nav className="tabs" role="tablist" aria-label="أقسام التطبيق">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mainTab === "home"}
-          className={`tab ${mainTab === "home" ? "active" : ""}`}
-          onClick={() => setMainTab("home")}
-        >
-          الرئيسية
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mainTab === "council_coa"}
-          className={`tab ${mainTab === "council_coa" ? "active" : ""}`}
-          onClick={() => setMainTab("council_coa")}
-        >
-          Council + COA
-        </button>
-      </nav>
-
-      {mainTab === "home" && (
-        <section className="action-card dashboard-panel">
-          <div className="panel-head">
-            <h2 className="panel-title">لوحة التشغيل الموحدة</h2>
-            <p className="panel-meta">Bento Grid — لمحة أمنية سريعة</p>
-          </div>
-
-          <div className="bento">
-            <article className="bento-tile bento-tile--span-2 bento-tile--row-2 bento-tile--feature">
-              <p className="bento-tile__head">Risk Score</p>
-              <div className="risk-ring">
-                <svg
-                  className="risk-ring__svg"
-                  width="108"
-                  height="108"
-                  viewBox="0 0 100 100"
-                  aria-hidden
-                >
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="44"
-                    fill="none"
-                    stroke="rgba(45,90,72,0.55)"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="44"
-                    fill="none"
-                    stroke={`url(#${riskRingGradId})`}
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeDasharray={riskRingDash.c}
-                    strokeDashoffset={riskRingDash.offset}
-                    transform="rotate(-90 50 50)"
-                  />
-                  <defs>
-                    <linearGradient id={riskRingGradId} x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#6ee7b7" />
-                      <stop offset="100%" stopColor="#22c55e" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="risk-ring__text">
-                  <p className="risk-ring__pct">{dashboardStats.score}%</p>
-                  <p className="risk-ring__label">
-                    مؤشر مخاطر مبني على توزيع الشدة
-                  </p>
-                </div>
-              </div>
-            </article>
-
-            <article className="bento-tile">
-              <p className="bento-tile__head">إجمالي التهديدات</p>
-              <p className="bento-tile__value bento-tile__value--sm">
+            <span className="nav-item__icon">{item.icon}</span>
+            <span className="nav-item__name">{item.name}</span>
+            {item.id === "result" && dashboardStats.totalThreats > 0 && (
+              <span className="nav-item__count">
                 {dashboardStats.totalThreats}
-              </p>
-            </article>
+              </span>
+            )}
+          </button>
+        ))}
+        <div className="sidebar__foot">v0.3 · 2026</div>
+      </aside>
 
-            <article
-              className={`bento-tile ${dashboardStats.highConfidence > 0 ? "bento-tile--warn" : ""}`}
-            >
-              <p className="bento-tile__head">High Confidence</p>
-              <p className="bento-tile__value bento-tile__value--sm">
-                {dashboardStats.highConfidence}
-              </p>
-            </article>
+      {/* —————————————————————— Content —————————————————————— */}
+      <main className="content">
+        {lastError && (
+          <p className="banner error" role="alert">
+            خطأ: {lastError}
+          </p>
+        )}
 
-            <article
-              className={`bento-tile ${dashboardStats.critical > 0 ? "bento-tile--danger" : ""}`}
-            >
-              <p className="bento-tile__head">Critical</p>
-              <p className="bento-tile__value bento-tile__value--sm">
-                {dashboardStats.critical}
-              </p>
-            </article>
+        {section === "dashboard" && (
+          <>
+            <div className="page-head">
+              <h1>لوحة المعلومات</h1>
+              <p>قراءة سريعة للوضع الأمني الحالي</p>
+            </div>
 
-            <article
-              className={`bento-tile ${dashboardStats.high > 0 ? "bento-tile--warn" : ""}`}
-            >
-              <p className="bento-tile__head">High</p>
-              <p className="bento-tile__value bento-tile__value--sm">
-                {dashboardStats.high}
-              </p>
-            </article>
+            <div className="meta-strip">
+              <span className="meta-strip__item">
+                <span className="meta-strip__label">آخر فحص</span>
+                <span className="meta-strip__value">
+                  {scanMeta && scanMeta.finishedAt
+                    ? formatTimestamp(scanMeta.finishedAt)
+                    : "—"}
+                </span>
+              </span>
+              <span className="meta-strip__item">
+                <span className="meta-strip__label">الوضع</span>
+                <span className="meta-strip__value">
+                  {scanMeta
+                    ? scanMeta.mode === "deep"
+                      ? "عميق"
+                      : scanMeta.mode === "quick"
+                        ? "سريع"
+                        : scanMeta.mode === "coa"
+                          ? "COA"
+                          : "—"
+                    : "—"}
+                </span>
+              </span>
+              <span className="meta-strip__item">
+                <span className="meta-strip__label">المدّة</span>
+                <span className="meta-strip__value">
+                  {scanMeta && scanMeta.finishedAt
+                    ? formatDuration(scanMeta.finishedAt - scanMeta.startedAt)
+                    : "—"}
+                </span>
+              </span>
+              <span className="meta-strip__item">
+                <span className="meta-strip__label">عدد الفحوصات</span>
+                <span className="meta-strip__value">{history.length}</span>
+              </span>
+            </div>
 
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">توزيع الشدة</p>
-              <div className="bento-tile__body severity-bars--compact">
-                <div className="severity-row">
-                  <span>Critical</span>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill critical"
-                      style={{
-                        width: `${Math.min(100, dashboardStats.critical * 18)}%`,
-                      }}
+            <div className="dash">
+              <article className="card dash__risk">
+                <p className="card__head">Risk Score</p>
+                <div className="risk-ring">
+                  <svg
+                    className="risk-ring__svg"
+                    width="120"
+                    height="120"
+                    viewBox="0 0 100 100"
+                    aria-hidden
+                  >
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      fill="none"
+                      stroke="rgba(45,90,72,0.55)"
+                      strokeWidth="8"
                     />
-                  </div>
-                  <strong>{dashboardStats.critical}</strong>
-                </div>
-                <div className="severity-row">
-                  <span>High</span>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill high"
-                      style={{
-                        width: `${Math.min(100, dashboardStats.high * 14)}%`,
-                      }}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      fill="none"
+                      stroke={`url(#${riskRingGradId})`}
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={riskRingDash.c}
+                      strokeDashoffset={riskRingDash.offset}
+                      transform="rotate(-90 50 50)"
                     />
+                    <defs>
+                      <linearGradient id={riskRingGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#6ee7b7" />
+                        <stop offset="100%" stopColor="#22c55e" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div>
+                    <p className="risk-ring__pct">{dashboardStats.score}%</p>
+                    <p className="risk-ring__label">
+                      مؤشر مبني على توزيع الشدّة
+                    </p>
                   </div>
-                  <strong>{dashboardStats.high}</strong>
                 </div>
-                <div className="severity-row">
-                  <span>Medium</span>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill medium"
-                      style={{
-                        width: `${Math.min(100, dashboardStats.medium * 12)}%`,
-                      }}
-                    />
+              </article>
+
+              <article className="card">
+                <p className="card__head">المؤشرات</p>
+                <div className="kpi-grid">
+                  <div className="kpi">
+                    <p className="kpi__label">إجمالي التهديدات</p>
+                    <p className="kpi__value">{dashboardStats.totalThreats}</p>
                   </div>
-                  <strong>{dashboardStats.medium}</strong>
-                </div>
-                <div className="severity-row">
-                  <span>Low</span>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill low"
-                      style={{
-                        width: `${Math.min(100, dashboardStats.low * 10)}%`,
-                      }}
-                    />
+                  <div className={`kpi ${dashboardStats.highConfidence > 0 ? "kpi--warn" : ""}`}>
+                    <p className="kpi__label">High Confidence</p>
+                    <p className="kpi__value">{dashboardStats.highConfidence}</p>
                   </div>
-                  <strong>{dashboardStats.low}</strong>
+                  <div className={`kpi ${dashboardStats.critical > 0 ? "kpi--danger" : ""}`}>
+                    <p className="kpi__label">Critical</p>
+                    <p className="kpi__value">{dashboardStats.critical}</p>
+                  </div>
                 </div>
-              </div>
-            </article>
-
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">حالة LLM</p>
-              <div className="bento-tile__body">
-                <div className="brand-status" style={{ justifyContent: "flex-start" }}>
-                  <StatusPill
-                    kind={llmPillKind(councilLlmState)}
-                    label={llmPillLabel("LLM Council", councilLlmState)}
-                  />
-                  <StatusPill
-                    kind={llmPillKind(coaLlmState)}
-                    label={llmPillLabel("LLM COA", coaLlmState)}
-                  />
+                <p className="card__head">توزيع الشدّة</p>
+                <div className="severity-bars">
+                  {(
+                    [
+                      { label: "Critical", key: "critical", mult: 18 },
+                      { label: "High", key: "high", mult: 14 },
+                      { label: "Medium", key: "medium", mult: 12 },
+                      { label: "Low", key: "low", mult: 10 },
+                    ] as const
+                  ).map((row) => {
+                    const value =
+                      dashboardStats[row.key as keyof typeof dashboardStats] as number;
+                    return (
+                      <div className="severity-row" key={row.key}>
+                        <span>{row.label}</span>
+                        <div className="bar-track">
+                          <div
+                            className={`bar-fill ${row.key}`}
+                            style={{ width: `${Math.min(100, value * row.mult)}%` }}
+                          />
+                        </div>
+                        <strong>{value}</strong>
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="dash-hint">
-                  يتحدث تلقائياً؛ أو بعد «ابدأ الفحص» وزر التحقق أدناه.
-                </p>
+              </article>
+            </div>
+
+            <article className="card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <p className="card__head">سجل الفحوصات</p>
+                {history.length > 0 && (
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => {
+                      setHistory([]);
+                      saveHistory([]);
+                    }}
+                  >
+                    مسح السجل
+                  </button>
+                )}
+              </div>
+              {history.length === 0 ? (
+                <p className="card__meta">لا يوجد سجل بعد. ابدأ فحصاً لتراكم البيانات.</p>
+              ) : (
+                <div className="history-table">
+                  <div className="history-row history-row--head">
+                    <span>الوقت</span>
+                    <span>النوع</span>
+                    <span>المدّة</span>
+                    <span>تهديدات</span>
+                    <span>Critical</span>
+                    <span>Score</span>
+                    <span>الحالة</span>
+                  </div>
+                  {history.map((h) => (
+                    <div className="history-row" key={h.id}>
+                      <span>{formatTimestamp(h.finishedAt)}</span>
+                      <span>
+                        <span className={`mode-chip mode-chip--${h.mode}`}>
+                          {h.mode === "deep"
+                            ? "عميق"
+                            : h.mode === "quick"
+                              ? "سريع"
+                              : h.mode === "coa"
+                                ? "COA"
+                                : "أمر"}
+                        </span>
+                      </span>
+                      <span>{formatDuration(h.durationMs)}</span>
+                      <span>{h.totalThreats}</span>
+                      <span>{h.critical}</span>
+                      <span>{h.score}%</span>
+                      <span>
+                        <span
+                          className={`status-chip ${h.ok ? "status-chip--ok" : "status-chip--err"}`}
+                        >
+                          {h.ok ? "ناجح" : "فشل"}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
+          </>
+        )}
+
+        {section === "scan" && (
+          <>
+            <div className="page-head">
+              <h1>فحص النظام</h1>
+              <p>اختر الوضع ثم ابدأ الفحص</p>
+            </div>
+
+            <section className="scan-hero">
+              <div className="scan-mode-switch" role="group" aria-label="وضع الفحص">
                 <button
                   type="button"
-                  className="btn"
+                  className={`scan-mode-btn ${councilScanMode === "quick" ? "active" : ""}`}
+                  onClick={() => setCouncilScanMode("quick")}
                   disabled={loadStatus === "loading"}
-                  onClick={testLlmStatus}
                 >
-                  تحقق من جاهزية LLM
+                  فحص سريع
+                </button>
+                <button
+                  type="button"
+                  className={`scan-mode-btn ${councilScanMode === "deep" ? "active" : ""}`}
+                  onClick={() => setCouncilScanMode("deep")}
+                  disabled={loadStatus === "loading"}
+                >
+                  فحص عميق (LLM + Agent)
                 </button>
               </div>
-            </article>
+              <button
+                type="button"
+                className="btn primary btn-start"
+                disabled={loadStatus === "loading"}
+                onClick={startCouncilScan}
+              >
+                {councilScanMode === "deep" ? "ابدأ الفحص العميق" : "ابدأ الفحص السريع"}
+              </button>
+            </section>
 
-            <article className="bento-tile bento-tile--span-4">
-              <p className="bento-tile__head">إجراءات سريعة</p>
-              <div className="bento-btn-grid">
+            <div className="scan-status" data-kind={scanStatusKind}>
+              <span className="scan-status__dot" />
+              <span style={{ flex: 1 }}>{scanStatusText}</span>
+              {loadStatus === "loading" && (
+                <span className="scan-timer">{formatDuration(elapsedMs)}</span>
+              )}
+              {(result.kind === "success" || result.kind === "error") && (
                 <button
                   type="button"
-                  className="btn"
-                  disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("التكامل / integrations", () =>
-                      fetch("/api/integrations")
-                    )
-                  }
+                  className="link-btn"
+                  onClick={() => setSection("result")}
                 >
-                  جلب حالة التكامل
+                  عرض التفاصيل ←
                 </button>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("COA health-proxy", () => fetch("/api/coa/health-proxy"))
-                  }
-                >
-                  فحص Proxy COA
-                </button>
-              </div>
-            </article>
-          </div>
-        </section>
-      )}
+              )}
+            </div>
 
-      {mainTab === "council_coa" && (
-        <section className="action-card dashboard-panel">
-          <div className="panel-head">
-            <h2 className="panel-title">Council + COA</h2>
-            <p className="panel-meta">Bento Grid — FastAPI 8765 و Flask 5050</p>
-          </div>
+            {history.length > 0 && (
+              <article className="card">
+                <p className="card__head">آخر الفحوصات</p>
+                <div className="history-mini">
+                  {history.slice(0, 4).map((h) => (
+                    <div className="history-mini__row" key={h.id}>
+                      <span className={`mode-chip mode-chip--${h.mode}`}>
+                        {h.mode === "deep"
+                          ? "عميق"
+                          : h.mode === "quick"
+                            ? "سريع"
+                            : h.mode === "coa"
+                              ? "COA"
+                              : "أمر"}
+                      </span>
+                      <span style={{ flex: 1 }}>{h.label}</span>
+                      <span style={{ color: "#8fb5a3" }}>
+                        {formatTimestamp(h.finishedAt)}
+                      </span>
+                      <span style={{ color: "#8fb5a3" }}>
+                        {formatDuration(h.durationMs)}
+                      </span>
+                      <span>
+                        <strong>{h.totalThreats}</strong> تهديد
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            )}
+          </>
+        )}
 
-          <div className="bento">
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">Council — فحص النظام</p>
-              <div className="bento-tile__body">
-                <p className="bento-tile__meta">
-                  يستخدم نفس وضع الفحص المختار في الشريط العلوي (سريع / عميق).
-                </p>
-                <button
-                  type="button"
-                  className="btn primary"
-                  disabled={loadStatus === "loading"}
-                  onClick={startCouncilScan}
-                >
-                  بدء فحص Council
-                </button>
-              </div>
-            </article>
+        {section === "council" && (
+          <>
+            <div className="page-head">
+              <h1>أدوات Council</h1>
+              <p>FastAPI · 8765</p>
+            </div>
 
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">COA — صحة الخدمة</p>
-              <div className="bento-btn-grid">
+            <article className="card">
+              <p className="card__head">الإجراءات</p>
+              <div className="tools-grid">
                 <button
                   type="button"
                   className="btn"
                   disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("COA health", () => fetch("/coa-api/health"), "شغّل COA Flask على 5050")
-                  }
-                >
-                  COA /api/health
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("Ollama diagnose", () =>
-                      fetch("/coa-api/health/ollama")
-                    )
-                  }
-                >
-                  health/ollama
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("LLM diagnose", () => fetch("/coa-api/health/llm"))
-                  }
-                >
-                  health/llm
-                </button>
-              </div>
-            </article>
-
-            <article className="bento-tile bento-tile--span-2 bento-tile--row-2">
-              <p className="bento-tile__head">Council — تدقيق ومساعدة</p>
-              <div className="bento-btn-grid">
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("verify-audit", () => fetch("/api/verify-audit"))
-                  }
+                  onClick={() => runJson("verify-audit", () => fetch("/api/verify-audit"))}
                 >
                   verify-audit
                 </button>
@@ -822,9 +992,7 @@ export default function App() {
                   type="button"
                   className="btn"
                   disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("baseline-stats", () => fetch("/api/baseline-stats"))
-                  }
+                  onClick={() => runJson("baseline-stats", () => fetch("/api/baseline-stats"))}
                 >
                   baseline-stats
                 </button>
@@ -832,9 +1000,7 @@ export default function App() {
                   type="button"
                   className="btn"
                   disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("list-quarantine", () => fetch("/api/list-quarantine"))
-                  }
+                  onClick={() => runJson("list-quarantine", () => fetch("/api/list-quarantine"))}
                 >
                   list-quarantine
                 </button>
@@ -842,50 +1008,55 @@ export default function App() {
                   type="button"
                   className="btn ghost"
                   disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runJson("مساعدة الأوامر", () => fetch("/api/commands"))
-                  }
+                  onClick={() => runJson("مساعدة الأوامر", () => fetch("/api/commands"))}
                 >
-                  أوامر API (مساعدة)
+                  أوامر API
                 </button>
               </div>
             </article>
 
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">Council — أرشيف</p>
-              <section className="archive-row">
-                <label htmlFor="archive-path">مسار الأرشيف — scan-archive</label>
-                <div className="archive-input">
-                  <input
-                    id="archive-path"
-                    type="text"
-                    placeholder="/path/to/archive.zip"
-                    value={archivePath}
-                    onChange={(e) => setArchivePath(e.target.value)}
-                    dir="ltr"
-                  />
-                  <button
-                    type="button"
-                    className="btn primary"
-                    disabled={loadStatus === "loading" || !archivePath.trim()}
-                    onClick={() =>
-                      runJson("فحص الأرشيف", () =>
-                        fetch("/api/scan-archive", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ path: archivePath.trim() }),
-                        })
-                      )
-                    }
-                  >
-                    فحص الأرشيف
-                  </button>
-                </div>
-              </section>
+            <article className="card archive-row">
+              <p className="card__head">فحص أرشيف</p>
+              <label htmlFor="archive-path">مسار الملف — scan-archive</label>
+              <div className="archive-input">
+                <input
+                  id="archive-path"
+                  type="text"
+                  placeholder="/path/to/archive.zip"
+                  value={archivePath}
+                  onChange={(e) => setArchivePath(e.target.value)}
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={loadStatus === "loading" || !archivePath.trim()}
+                  onClick={() =>
+                    runJson("فحص الأرشيف", () =>
+                      fetch("/api/scan-archive", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ path: archivePath.trim() }),
+                      })
+                    )
+                  }
+                >
+                  ابدأ
+                </button>
+              </div>
             </article>
+          </>
+        )}
 
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">COA — فحص كامل</p>
+        {section === "coa" && (
+          <>
+            <div className="page-head">
+              <h1>أدوات COA</h1>
+              <p>Flask · 5050</p>
+            </div>
+
+            <article className="card">
+              <p className="card__head">فحص COA كامل</p>
               <p className="coa-hint">
                 يتطلب <code>web_api.py</code> على <code>5050</code>. بعد الفحص يمكن جلب آخر
                 defense / MITRE / OT أو تنزيل التقارير.
@@ -912,35 +1083,52 @@ export default function App() {
                 type="button"
                 className="btn primary"
                 disabled={loadStatus === "loading"}
-                onClick={async () => {
-                  setLoadStatus("loading");
-                  setLastError(null);
-                  setResult({ kind: "loading", message: "جاري الفحص…" });
-                  const ready = await ensureLlmReady("coa");
-                  if (!ready) return;
-                  await runJson(
-                    "COA full scan",
-                    () =>
-                      fetch("/coa-api/scan", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          dry_run: coaDryRun,
-                          use_council: coaUseCouncil,
-                        }),
-                      }),
-                    undefined,
-                    "جاري الفحص…"
-                  );
-                }}
+                onClick={startCoaScan}
+                style={{ alignSelf: "flex-start" }}
               >
-                فحص COA (POST /scan)
+                ابدأ فحص COA
               </button>
             </article>
 
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">COA — آخر مسح</p>
-              <div className="bento-btn-grid">
+            <article className="card">
+              <p className="card__head">صحة الخدمات</p>
+              <div className="tools-grid tools-grid--3">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("COA health", () => fetch("/coa-api/health"), "شغّل COA Flask على 5050")
+                  }
+                >
+                  /api/health
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("Ollama diagnose", () => fetch("/coa-api/health/ollama"))
+                  }
+                >
+                  health/ollama
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("LLM diagnose", () => fetch("/coa-api/health/llm"))
+                  }
+                >
+                  health/llm
+                </button>
+              </div>
+            </article>
+
+            <article className="card">
+              <p className="card__head">آخر مسح</p>
+              <div className="tools-grid tools-grid--3">
                 <button
                   type="button"
                   className="btn"
@@ -951,7 +1139,7 @@ export default function App() {
                     )
                   }
                 >
-                  last/defense-context
+                  defense-context
                 </button>
                 <button
                   type="button"
@@ -961,7 +1149,7 @@ export default function App() {
                     runJson("آخر mitre-deep", () => fetch("/coa-api/last/mitre-deep"))
                   }
                 >
-                  last/mitre-deep
+                  mitre-deep
                 </button>
                 <button
                   type="button"
@@ -971,43 +1159,37 @@ export default function App() {
                     runJson("آخر ot-ics", () => fetch("/coa-api/last/ot-ics"))
                   }
                 >
-                  last/ot-ics
+                  ot-ics
                 </button>
               </div>
             </article>
 
-            <article className="bento-tile bento-tile--span-2">
-              <p className="bento-tile__head">COA — تقارير</p>
-              <div className="bento-btn-grid">
+            <article className="card">
+              <p className="card__head">التقارير</p>
+              <div className="tools-grid tools-grid--4">
                 <button
                   type="button"
                   className="btn"
                   disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runDownload("تقرير TXT", "/coa-api/reports/txt")
-                  }
+                  onClick={() => runDownload("تقرير TXT", "/coa-api/reports/txt")}
                 >
-                  تنزيل reports/txt
+                  reports/txt
                 </button>
                 <button
                   type="button"
                   className="btn"
                   disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runDownload("تقرير HTML", "/coa-api/reports/html")
-                  }
+                  onClick={() => runDownload("تقرير HTML", "/coa-api/reports/html")}
                 >
-                  تنزيل reports/html
+                  reports/html
                 </button>
                 <button
                   type="button"
                   className="btn"
                   disabled={loadStatus === "loading"}
-                  onClick={() =>
-                    runDownload("incident", "/coa-api/reports/incident")
-                  }
+                  onClick={() => runDownload("incident", "/coa-api/reports/incident")}
                 >
-                  تنزيل reports/incident
+                  incident
                 </button>
                 <button
                   type="button"
@@ -1019,106 +1201,343 @@ export default function App() {
                     )
                   }
                 >
-                  reports/mitre-navigator.json
+                  navigator.json
                 </button>
               </div>
             </article>
-          </div>
-        </section>
-      )}
+          </>
+        )}
 
-      {lastError && (
-        <p className="banner error" role="alert">
-          خطأ: {lastError}
-        </p>
-      )}
+        {section === "result" && (
+          <>
+            <div className="page-head">
+              <h1>النتيجة</h1>
+              <p>
+                {result.kind === "success"
+                  ? "اكتمل التنفيذ"
+                  : result.kind === "error"
+                    ? "فشل التنفيذ"
+                    : result.kind === "loading"
+                      ? "قيد التنفيذ…"
+                      : "لا توجد نتيجة بعد"}
+              </p>
+            </div>
 
-      <section className="output-panel">
-        <div className="output-head">
-          <span>نتيجة العملية</span>
-          {loadStatus === "loading" && (
-            <span className="pulse">
-              {result.kind === "loading" ? result.message : "جاري التحميل…"}
-            </span>
-          )}
-        </div>
-        <div className={`result-card result-card--${resultVariant}`}>
-          {(result.kind === "idle" || result.kind === "loading") && (
-            <p className="result-empty">{result.message}</p>
-          )}
-
-          {(result.kind === "success" || result.kind === "error") &&
-            resultEntries.length > 0 && (
-              <div className="result-grid">
-                {resultEntries.map(([key, value]) => (
-                  <article className="result-item" key={key}>
-                    <h4>{key}</h4>
-                    {key === "threats" && Array.isArray(value) ? (
-                      value.length > 0 ? (
-                        <div className="threats-list">
-                          {value.map((threat, idx) => {
-                            const t = (threat ?? {}) as JsonRecord;
-                            const signals = Array.isArray(t.signals) ? t.signals : [];
-                            return (
-                              <div className="threat-item" key={`${String(t.source)}-${idx}`}>
-                                <div className="threat-head">
-                                  <p className="threat-title">{formatPrimitive(t.type)}</p>
-                                  <span className={`severity-chip ${severityClass(t.severity)}`}>
-                                    {formatPrimitive(t.severity)}
-                                  </span>
-                                </div>
-                                <p>{formatPrimitive(t.source)}</p>
-                                <p>{formatPrimitive(t.details)}</p>
-                                {signals.length > 0 && (
-                                  <p className="threat-signals">
-                                    الإشارات: {signals.map((s) => String(s)).join(" · ")}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p>لا توجد تهديدات.</p>
-                      )
-                    ) : Array.isArray(value) ? (
-                      value.length > 0 ? (
-                        <ul className="result-list">
-                          {value.map((item, idx) => (
-                            <li key={`${key}-${idx}`}>{formatPrimitive(item)}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p>—</p>
-                      )
-                    ) : typeof value === "object" && value !== null ? (
-                      <div className="result-subgrid">
-                        {Object.entries(value as JsonRecord).map(([subKey, subValue]) => (
-                          <p key={`${key}-${subKey}`}>
-                            <strong>{subKey}:</strong> {formatPrimitive(subValue)}
-                          </p>
-                        ))}
+            {scanMeta && (
+              <div className="result-summary">
+                <div className="result-summary__item">
+                  <span className="result-summary__label">العنوان</span>
+                  <span className="result-summary__value">{scanMeta.label}</span>
+                </div>
+                <div className="result-summary__item">
+                  <span className="result-summary__label">الوضع</span>
+                  <span className={`mode-chip mode-chip--${scanMeta.mode}`}>
+                    {scanMeta.mode === "deep"
+                      ? "عميق"
+                      : scanMeta.mode === "quick"
+                        ? "سريع"
+                        : scanMeta.mode === "coa"
+                          ? "COA"
+                          : "أمر"}
+                  </span>
+                </div>
+                <div className="result-summary__item">
+                  <span className="result-summary__label">المدّة</span>
+                  <span className="result-summary__value">
+                    {scanMeta.finishedAt
+                      ? formatDuration(scanMeta.finishedAt - scanMeta.startedAt)
+                      : formatDuration(elapsedMs)}
+                  </span>
+                </div>
+                <div className="result-summary__item">
+                  <span className="result-summary__label">التوقيت</span>
+                  <span className="result-summary__value">
+                    {formatTimestamp(scanMeta.finishedAt || scanMeta.startedAt)}
+                  </span>
+                </div>
+                <div className="result-summary__item">
+                  <span className="result-summary__label">الحالة</span>
+                  <span
+                    className={`status-chip ${result.kind === "success" ? "status-chip--ok" : result.kind === "error" ? "status-chip--err" : "status-chip--neutral"}`}
+                  >
+                    {result.kind === "success"
+                      ? "ناجح"
+                      : result.kind === "error"
+                        ? "فشل"
+                        : "قيد العمل"}
+                  </span>
+                </div>
+                {result.kind === "success" || result.kind === "error" ? (
+                  (() => {
+                    const data =
+                      result.data && typeof result.data === "object"
+                        ? (result.data as JsonRecord)
+                        : null;
+                    const scanId =
+                      data && typeof data.scan_id === "string" ? data.scan_id : null;
+                    return scanId ? (
+                      <div className="result-summary__item">
+                        <span className="result-summary__label">Scan ID</span>
+                        <span
+                          className="result-summary__value"
+                          style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.78rem" }}
+                        >
+                          {scanId.slice(0, 12)}…
+                        </span>
                       </div>
-                    ) : (
-                      <p>{formatPrimitive(value)}</p>
-                    )}
-                  </article>
-                ))}
+                    ) : null;
+                  })()
+                ) : null}
               </div>
             )}
 
-          {(result.kind === "success" || result.kind === "error") &&
-            resultEntries.length === 0 && (
-              <p className="result-empty">
-                {formatPrimitive(result.data)}
-              </p>
-            )}
-        </div>
-      </section>
+            {(() => {
+              if (result.kind !== "success" && result.kind !== "error") return null;
+              const data =
+                result.data && typeof result.data === "object"
+                  ? (result.data as JsonRecord)
+                  : null;
+              if (!data) return null;
+              const fs = data.filesystem_scan;
+              if (!fs || typeof fs !== "object") return null;
+              const obj = fs as JsonRecord;
+              const scannedFiles = Number(obj.scanned_files ?? 0) || 0;
+              const findingsCount = Number(obj.findings_count ?? 0) || 0;
+              const roots = Array.isArray(obj.roots) ? (obj.roots as unknown[]) : [];
+              const findings = Array.isArray(obj.findings)
+                ? (obj.findings as JsonRecord[])
+                : [];
+              return (
+                <article className="card">
+                  <p className="card__head">فحص الملفات (Filesystem)</p>
+                  <div className="kpi-grid">
+                    <div className="kpi">
+                      <p className="kpi__label">ملفات مفحوصة</p>
+                      <p className="kpi__value">{scannedFiles}</p>
+                    </div>
+                    <div className={`kpi ${findingsCount > 0 ? "kpi--warn" : ""}`}>
+                      <p className="kpi__label">نتائج مشبوهة</p>
+                      <p className="kpi__value">{findingsCount}</p>
+                    </div>
+                    <div className="kpi">
+                      <p className="kpi__label">مسارات مفحوصة</p>
+                      <p className="kpi__value">{roots.length}</p>
+                    </div>
+                  </div>
+                  {findings.length > 0 && (
+                    <div className="finding-list">
+                      {findings.slice(0, 8).map((f, idx) => (
+                        <div className="finding-row" key={`fs-${idx}`}>
+                          <span className="finding-row__path" dir="ltr">
+                            {String(f.path ?? "—")}
+                          </span>
+                          <span style={{ color: "#8fb5a3", fontSize: "0.74rem" }}>
+                            {Array.isArray(f.signals) ? f.signals.join(" · ") : "—"}
+                          </span>
+                          <span
+                            className={`severity-chip ${severityClass(f.severity ?? "medium")}`}
+                          >
+                            {String(f.recommended_action ?? "investigate")}
+                          </span>
+                        </div>
+                      ))}
+                      {findings.length > 8 && (
+                        <p className="card__meta">
+                          + {findings.length - 8} أخرى…
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })()}
 
-      <footer className="app-footer">
-        v0.2.1 · Local SOC · 2026
-      </footer>
+            {(() => {
+              if (result.kind !== "success" && result.kind !== "error") return null;
+              const data =
+                result.data && typeof result.data === "object"
+                  ? (result.data as JsonRecord)
+                  : null;
+              if (!data) return null;
+              const dfa = data.deep_file_analysis;
+              if (!dfa || typeof dfa !== "object") return null;
+              const obj = dfa as JsonRecord;
+              const results = Array.isArray(obj.results)
+                ? (obj.results as JsonRecord[])
+                : [];
+              const filesAnalyzed = Number(obj.files_analyzed ?? results.length) || 0;
+              const suspiciousCount = Number(obj.suspicious_count ?? 0) || 0;
+              const duration = Number(obj.duration_seconds ?? 0) || 0;
+              const model = String(obj.model ?? "—");
+              const note = typeof obj.note === "string" ? (obj.note as string) : null;
+              const error = typeof obj.error === "string" ? (obj.error as string) : null;
+              return (
+                <article className="card">
+                  <p className="card__head">تحليل LLM للملفات (Deep)</p>
+                  {error && (
+                    <p
+                      className="card__meta"
+                      style={{ color: "#fecaca" }}
+                    >
+                      {error}
+                    </p>
+                  )}
+                  {note && !error && <p className="card__meta">{note}</p>}
+                  <div className="kpi-grid">
+                    <div className="kpi">
+                      <p className="kpi__label">ملفات حُلّلت</p>
+                      <p className="kpi__value">{filesAnalyzed}</p>
+                    </div>
+                    <div className={`kpi ${suspiciousCount > 0 ? "kpi--warn" : ""}`}>
+                      <p className="kpi__label">مشبوهة</p>
+                      <p className="kpi__value">{suspiciousCount}</p>
+                    </div>
+                    <div className="kpi">
+                      <p className="kpi__label">المدّة</p>
+                      <p className="kpi__value" style={{ fontSize: "1.1rem" }}>
+                        {duration ? `${duration} ث` : "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="card__meta" style={{ direction: "ltr", textAlign: "start" }}>
+                    Model: <code>{model}</code>
+                  </p>
+                  {results.length > 0 && (
+                    <div className="finding-list">
+                      {results.map((r, idx) => {
+                        const verdict = String(r.verdict ?? "unknown");
+                        const path = String(r.path ?? "—");
+                        const rationale = String(r.rationale ?? "");
+                        const meta =
+                          r.metadata && typeof r.metadata === "object"
+                            ? (r.metadata as JsonRecord)
+                            : null;
+                        const size = meta && typeof meta.size_bytes === "number"
+                          ? formatBytes(meta.size_bytes as number)
+                          : null;
+                        return (
+                          <div className="finding-row" key={`dfa-${idx}`}>
+                            <span className="finding-row__path" dir="ltr">
+                              {path}
+                            </span>
+                            {size && (
+                              <span style={{ color: "#8fb5a3", fontSize: "0.74rem" }}>
+                                {size}
+                              </span>
+                            )}
+                            {rationale && (
+                              <span style={{ color: "#b8d4c8", fontSize: "0.78rem" }}>
+                                {rationale}
+                              </span>
+                            )}
+                            <span
+                              className={`severity-chip ${
+                                verdict === "suspicious"
+                                  ? "is-high"
+                                  : verdict === "benign"
+                                    ? "is-low"
+                                    : "is-neutral"
+                              }`}
+                            >
+                              {verdict === "suspicious"
+                                ? "مشبوه"
+                                : verdict === "benign"
+                                  ? "آمن"
+                                  : "غير محدد"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </article>
+              );
+            })()}
+
+            <div className={`result-card result-card--${resultVariant}`}>
+              {(result.kind === "idle" || result.kind === "loading") && (
+                <p className="result-empty">{result.message}</p>
+              )}
+
+              {(result.kind === "success" || result.kind === "error") &&
+                resultEntries.length > 0 && (
+                  <div className="result-grid">
+                    {resultEntries
+                      .filter(
+                        ([k]) => k !== "filesystem_scan" && k !== "deep_file_analysis"
+                      )
+                      .map(([key, value]) => (
+                      <article className="result-item" key={key}>
+                        <h4>{key}</h4>
+                        {key === "threats" && Array.isArray(value) ? (
+                          value.length > 0 ? (
+                            <div className="threats-list">
+                              {value.map((threat, idx) => {
+                                const t = (threat ?? {}) as JsonRecord;
+                                const signals = Array.isArray(t.signals) ? t.signals : [];
+                                return (
+                                  <div
+                                    className="threat-item"
+                                    key={`${String(t.source)}-${idx}`}
+                                  >
+                                    <div className="threat-head">
+                                      <p className="threat-title">
+                                        {formatPrimitive(t.type)}
+                                      </p>
+                                      <span
+                                        className={`severity-chip ${severityClass(t.severity)}`}
+                                      >
+                                        {formatPrimitive(t.severity)}
+                                      </span>
+                                    </div>
+                                    <p>{formatPrimitive(t.source)}</p>
+                                    <p>{formatPrimitive(t.details)}</p>
+                                    {signals.length > 0 && (
+                                      <p className="threat-signals">
+                                        الإشارات: {signals.map((s) => String(s)).join(" · ")}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p>لا توجد تهديدات.</p>
+                          )
+                        ) : Array.isArray(value) ? (
+                          value.length > 0 ? (
+                            <ul className="result-list">
+                              {value.map((item, idx) => (
+                                <li key={`${key}-${idx}`}>{formatPrimitive(item)}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>—</p>
+                          )
+                        ) : typeof value === "object" && value !== null ? (
+                          <div className="result-subgrid">
+                            {Object.entries(value as JsonRecord).map(([subKey, subValue]) => (
+                              <p key={`${key}-${subKey}`}>
+                                <strong>{subKey}:</strong> {formatPrimitive(subValue)}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p>{formatPrimitive(value)}</p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+
+              {(result.kind === "success" || result.kind === "error") &&
+                resultEntries.length === 0 && (
+                  <p className="result-empty">{formatPrimitive(result.data)}</p>
+                )}
+            </div>
+          </>
+        )}
+      </main>
     </div>
   );
 }
