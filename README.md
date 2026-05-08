@@ -113,6 +113,8 @@ python run.py list-quarantine        # عرض الملفات في الحجر
 | COA Flask (`web_api.py`) | **5050** | من مجلد `COA/COA_Project` — مسارات `/api/*` داخل Flask |
 | واجهة Vite الموحّدة | **5173** | `npm run dev` داخل `web/` — يوجّه `/api` → 8765 و `/coa-api` → 5050 |
 
+الواجهة الموحّدة بأسلوب **SOC داكن** (سيان / نيون أخضر، شعار، فافيكون) — افتح `http://127.0.0.1:5173` بعد `make dev`.
+
 ### إعداد سريع
 
 ```bash

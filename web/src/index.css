@@ -5,24 +5,40 @@
 }
 
 :root {
-  --bg: #0c0f14;
-  --surface: #151a22;
-  --border: #2a3444;
-  --text: #e8edf5;
-  --muted: #8b98ab;
-  --accent: #3d8bfd;
-  --accent-dim: #2563c9;
+  --bg: #060a13;
+  --bg-2: #0a111e;
+  --surface: #0f1623;
+  --surface-2: #131d2e;
+  --border: #1f2c44;
+  --border-glow: rgba(34, 211, 238, 0.25);
+  --text: #e6f1ff;
+  --muted: #7d8aa6;
+  --accent: #22d3ee;
+  --accent-dim: #0e9bb1;
+  --ok: #34d399;
+  --warn: #fbbf24;
   --danger: #f87171;
-  --ok: #4ade80;
+  --glow-cyan: 0 0 24px rgba(34, 211, 238, 0.35);
 }
 
 html,
 body {
   margin: 0;
   min-height: 100%;
-  font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
-  background: radial-gradient(1200px 800px at 10% -10%, #1a2332 0%, var(--bg) 55%);
+  font-family: "Cairo", "Inter", system-ui, sans-serif;
   color: var(--text);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 900px 500px at 85% -15%, rgba(34, 211, 238, 0.14), transparent 55%),
+    radial-gradient(ellipse 700px 400px at 5% 100%, rgba(52, 211, 153, 0.08), transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(34, 211, 238, 0.028) 2px,
+      rgba(34, 211, 238, 0.028) 4px
+    );
+  background-attachment: fixed;
 }
 
 #root {
@@ -33,4 +49,10 @@ body {
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+code,
+pre,
+kbd {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }

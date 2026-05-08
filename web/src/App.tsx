@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { BrandLogo, StatusPill } from "./Brand";
 import "./App.css";
 
 type LoadStatus = "idle" | "loading" | "error";
@@ -124,13 +125,28 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="hero">
-        <h1>مجلس الوكلاء + COA</h1>
-        <p className="subtitle">
-          <strong>Council</strong> عبر <code>/api</code> → FastAPI <code>8765</code>.{" "}
-          <strong>COA</strong> عبر <code>/coa-api</code> → Flask <code>5050</code>. شغّل{" "}
-          <code>make dev</code> أو <code>bash scripts/start_merged.sh</code>.
-        </p>
+      <header className="brand-bar">
+        <div className="brand-bar__left">
+          <BrandLogo size={56} />
+          <div className="brand-text">
+            <h1>
+              مجلس الوكلاء <span className="brand-sep">·</span> COA
+            </h1>
+            <p className="brand-tag">
+              منصة SOC محلية متعددة الوكلاء — Local Multi-Agent SOC
+            </p>
+            <p className="subtitle brand-sub">
+              <strong>Council</strong> عبر <code>/api</code> → FastAPI{" "}
+              <code>8765</code>. <strong>COA</strong> عبر <code>/coa-api</code> → Flask{" "}
+              <code>5050</code>. شغّل <code>make dev</code> أو{" "}
+              <code>bash scripts/start_merged.sh</code>.
+            </p>
+          </div>
+        </div>
+        <div className="brand-status" aria-label="خدمات المنصة">
+          <StatusPill kind="ok" label="FastAPI 8765" />
+          <StatusPill kind="ok" label="COA 5050" />
+        </div>
       </header>
 
       <nav className="tabs" role="tablist" aria-label="أقسام التطبيق">
@@ -469,6 +485,10 @@ export default function App() {
           {output || "// اختر تبويباً ثم نفّذ إجراءً"}
         </pre>
       </section>
+
+      <footer className="app-footer">
+        v0.2.1 · Local SOC · 2026
+      </footer>
     </div>
   );
 }
