@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from fastapi import FastAPI
@@ -96,6 +97,10 @@ class ArchiveBody(BaseModel):
     path: str = Field(..., min_length=1, description="Absolute or relative path to archive")
 
 
+class ScanSystemBody(BaseModel):
+    mode: Literal["quick", "deep"] = "deep"
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
@@ -158,7 +163,12 @@ async def commands_help():
     return {
         "cli": "python run.py <command> [args]",
         "commands": [
-            {"name": "scan-system", "method": "POST", "path": "/api/scan-system"},
+            {
+                "name": "scan-system",
+                "method": "POST",
+                "path": "/api/scan-system",
+                "body": {"mode": "quick|deep"},
+            },
             {"name": "scan-archive", "method": "POST", "path": "/api/scan-archive", "body": {"path": "<file>"}},
             {"name": "verify-audit", "method": "GET", "path": "/api/verify-audit"},
             {"name": "baseline-stats", "method": "GET", "path": "/api/baseline-stats"},
@@ -168,11 +178,50 @@ async def commands_help():
 
 
 @app.post("/api/scan-system")
-async def api_scan_system():
+async def api_scan_system(body: ScanSystemBody):
     system: CouncilSystem = app.state.system
     async with _scan_lock:
+        if body.mode == "quick":
+            # Fast bounded scan for demos: lightweight filesystem heuristic + fixed duration.
+            from tools.system_probe import SystemProbe
+
+            started = time.monotonic()
+            fs = SystemProbe(warm_cpu=False).scan_filesystem_quick(max_files=3500, max_findings=20)
+            threats = [
+                {
+                    "severity": "MEDIUM",
+                    "confidence": "LOW",
+                    "score": 45,
+                    "type": "File Threat",
+                    "source": str(f.get("path", "unknown")),
+                    "details": f"Detected: {', '.join(f.get('signals', []))}",
+                    "signals": f.get("signals", []),
+                    "recommended_action": f.get("recommended_action", "investigate"),
+                }
+                for f in fs.get("findings", [])
+            ]
+            elapsed = time.monotonic() - started
+            if elapsed < 10:
+                await asyncio.sleep(10 - elapsed)
+
+            return {
+                "ok": True,
+                "scan_mode": "quick",
+                "duration_seconds": 10,
+                "total_threats": len(threats),
+                "critical": 0,
+                "high": 0,
+                "medium": len(threats),
+                "low": 0,
+                "high_confidence_threats": 0,
+                "threats": threats,
+                "filesystem_scan": fs,
+            }
+
         outcome = await execute_scan_system(system, show_progress=False)
-        return outcome.as_json()
+        payload = outcome.as_json()
+        payload["scan_mode"] = "deep"
+        return payload
 
 
 @app.post("/api/scan-archive")

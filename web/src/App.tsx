@@ -3,7 +3,7 @@ import { BrandLogo, StatusPill } from "./Brand";
 import "./App.css";
 
 type LoadStatus = "idle" | "loading" | "error";
-type MainTab = "council" | "coa" | "status";
+type MainTab = "dashboard" | "council" | "coa" | "status";
 type JsonRecord = Record<string, unknown>;
 type ResultState =
   | { kind: "idle"; message: string }
@@ -55,7 +55,7 @@ function getKnownCoaHint(body: unknown): string | null {
 }
 
 export default function App() {
-  const [mainTab, setMainTab] = useState<MainTab>("council");
+  const [mainTab, setMainTab] = useState<MainTab>("dashboard");
   const [archivePath, setArchivePath] = useState("");
   const [result, setResult] = useState<ResultState>({
     kind: "idle",
@@ -67,6 +67,7 @@ export default function App() {
   const [coaDryRun, setCoaDryRun] = useState(true);
   const [coaUseCouncil, setCoaUseCouncil] = useState(false);
   const [coaPresentationDemo, setCoaPresentationDemo] = useState(false);
+  const [councilScanMode, setCouncilScanMode] = useState<"quick" | "deep">("deep");
   const [councilLlmState, setCouncilLlmState] =
     useState<LlmConnectionState>("checking");
   const [coaLlmState, setCoaLlmState] = useState<LlmConnectionState>("checking");
@@ -381,6 +382,34 @@ export default function App() {
     return `${prefix}: غير متصل`;
   };
 
+  const dashboardStats = useMemo(() => {
+    if (result.kind !== "success" && result.kind !== "error") {
+      return {
+        totalThreats: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        highConfidence: 0,
+        score: 0,
+      };
+    }
+
+    const data = (result.data && typeof result.data === "object"
+      ? (result.data as JsonRecord)
+      : {}) as JsonRecord;
+
+    const totalThreats = Number(data.total_threats ?? 0) || 0;
+    const critical = Number(data.critical ?? 0) || 0;
+    const high = Number(data.high ?? 0) || 0;
+    const medium = Number(data.medium ?? 0) || 0;
+    const low = Number(data.low ?? 0) || 0;
+    const highConfidence = Number(data.high_confidence_threats ?? 0) || 0;
+    const score = Math.min(100, critical * 35 + high * 20 + medium * 8 + low * 3);
+
+    return { totalThreats, critical, high, medium, low, highConfidence, score };
+  }, [result]);
+
   return (
     <div className="app">
       <header className="brand-bar">
@@ -413,6 +442,15 @@ export default function App() {
         <button
           type="button"
           role="tab"
+          aria-selected={mainTab === "dashboard"}
+          className={`tab ${mainTab === "dashboard" ? "active" : ""}`}
+          onClick={() => setMainTab("dashboard")}
+        >
+          Dashboard
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={mainTab === "council"}
           className={`tab ${mainTab === "council" ? "active" : ""}`}
           onClick={() => setMainTab("council")}
@@ -439,9 +477,116 @@ export default function App() {
         </button>
       </nav>
 
+      {mainTab === "dashboard" && (
+        <section className="action-card dashboard-panel">
+          <div className="panel-head">
+            <h2 className="panel-title">لوحة التحليل</h2>
+            <p className="panel-meta">قراءة سريعة لأهم أرقام الفحص الحالي</p>
+          </div>
+
+          <div className="kpi-grid">
+            <article className="kpi-card">
+              <p className="kpi-label">إجمالي التهديدات</p>
+              <p className="kpi-value">{dashboardStats.totalThreats}</p>
+            </article>
+            <article className="kpi-card">
+              <p className="kpi-label">High Confidence</p>
+              <p className="kpi-value">{dashboardStats.highConfidence}</p>
+            </article>
+            <article className="kpi-card">
+              <p className="kpi-label">Critical</p>
+              <p className="kpi-value">{dashboardStats.critical}</p>
+            </article>
+            <article className="kpi-card">
+              <p className="kpi-label">Risk Score</p>
+              <p className="kpi-value">{dashboardStats.score}%</p>
+            </article>
+          </div>
+
+          <div className="severity-bars">
+            <div className="severity-row">
+              <span>Critical</span>
+              <div className="bar-track">
+                <div
+                  className="bar-fill critical"
+                  style={{ width: `${Math.min(100, dashboardStats.critical * 18)}%` }}
+                />
+              </div>
+              <strong>{dashboardStats.critical}</strong>
+            </div>
+            <div className="severity-row">
+              <span>High</span>
+              <div className="bar-track">
+                <div
+                  className="bar-fill high"
+                  style={{ width: `${Math.min(100, dashboardStats.high * 14)}%` }}
+                />
+              </div>
+              <strong>{dashboardStats.high}</strong>
+            </div>
+            <div className="severity-row">
+              <span>Medium</span>
+              <div className="bar-track">
+                <div
+                  className="bar-fill medium"
+                  style={{ width: `${Math.min(100, dashboardStats.medium * 12)}%` }}
+                />
+              </div>
+              <strong>{dashboardStats.medium}</strong>
+            </div>
+            <div className="severity-row">
+              <span>Low</span>
+              <div className="bar-track">
+                <div
+                  className="bar-fill low"
+                  style={{ width: `${Math.min(100, dashboardStats.low * 10)}%` }}
+                />
+              </div>
+              <strong>{dashboardStats.low}</strong>
+            </div>
+          </div>
+
+          <div className="dashboard-foot">
+            <StatusPill
+              kind={llmPillKind(councilLlmState)}
+              label={llmPillLabel("LLM Council", councilLlmState)}
+            />
+            <StatusPill
+              kind={llmPillKind(coaLlmState)}
+              label={llmPillLabel("LLM COA", coaLlmState)}
+            />
+            <span className="dash-hint">
+              حدّث الأرقام عبر تشغيل فحص جديد من تبويب Council أو COA
+            </span>
+          </div>
+        </section>
+      )}
+
       {mainTab === "council" && (
-        <>
+        <section className="action-card">
+          <div className="panel-head">
+            <h2 className="panel-title">أدوات Council</h2>
+            <p className="panel-meta">تشغيل الفحص الأساسي، التدقيق، وإدارة الأرشيف</p>
+          </div>
           <section className="actions">
+            <div className="scan-mode-switch" role="group" aria-label="وضع فحص Council">
+              <button
+                type="button"
+                className={`scan-mode-btn ${councilScanMode === "quick" ? "active" : ""}`}
+                onClick={() => setCouncilScanMode("quick")}
+                disabled={loadStatus === "loading"}
+              >
+                فحص سريع (10 ثوانٍ)
+              </button>
+              <button
+                type="button"
+                className={`scan-mode-btn ${councilScanMode === "deep" ? "active" : ""}`}
+                onClick={() => setCouncilScanMode("deep")}
+                disabled={loadStatus === "loading"}
+              >
+                فحص عميق (LLM + Agent)
+              </button>
+            </div>
             <button
               type="button"
               className="btn primary"
@@ -449,12 +594,20 @@ export default function App() {
               onClick={async () => {
                 const ready = await ensureLlmReady("council");
                 if (!ready) return;
-                await runJson("فحص النظام (Council)", () =>
-                  fetch("/api/scan-system", { method: "POST" })
+                await runJson(
+                  councilScanMode === "deep"
+                    ? "فحص النظام العميق (Council)"
+                    : "فحص النظام السريع (Council)",
+                  () =>
+                    fetch("/api/scan-system", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ mode: councilScanMode }),
+                    })
                 );
               }}
             >
-              فحص النظام — scan-system
+              {councilScanMode === "deep" ? "ابدأ الفحص العميق" : "ابدأ الفحص السريع"}
             </button>
             <button
               type="button"
@@ -526,11 +679,15 @@ export default function App() {
               </button>
             </div>
           </section>
-        </>
+        </section>
       )}
 
       {mainTab === "coa" && (
-        <section className="coa-panel">
+        <section className="coa-panel action-card">
+          <div className="panel-head">
+            <h2 className="panel-title">أدوات COA</h2>
+            <p className="panel-meta">الفحص المتقدم والتقارير والتحليلات العميقة</p>
+          </div>
           <p className="coa-hint">
             يتطلب تشغيل <code>web_api.py</code> على المنفذ <code>5050</code>. بعد{" "}
             <strong>فحص COA</strong> يمكن جلب defense / MITRE / OT من آخر مسح، أو تنزيل التقارير.
@@ -699,7 +856,11 @@ export default function App() {
       )}
 
       {mainTab === "status" && (
-        <section className="status-panel">
+        <section className="status-panel action-card">
+          <div className="panel-head">
+            <h2 className="panel-title">الحالة والتكامل</h2>
+            <p className="panel-meta">فحص جاهزية الخدمات والاتصال بين Council وCOA</p>
+          </div>
           <p className="section-desc">
             يجمع حالة Council FastAPI و COA Flask من الخادم نفسه (8765).
           </p>
