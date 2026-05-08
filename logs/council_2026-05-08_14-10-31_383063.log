@@ -1,0 +1,2 @@
+2026-05-08 14:10:31.518 | INFO     | intelligence.behavioral_baseline:_load:253 - Loaded 558 baselines from data/baseline.json
+2026-05-08 14:10:31.682 | INFO     | run:initialize:152 - Council system initialized

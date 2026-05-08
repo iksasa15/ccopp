@@ -11,9 +11,12 @@ Then start the Vite dev server in ./web (npm run dev).
 from __future__ import annotations
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -61,6 +64,33 @@ def _wire_cors(application: FastAPI, config: dict[str, Any]) -> None:
 _cfg_at_import = load_config()
 _wire_cors(app, _cfg_at_import)
 
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_COA_PROJECT = Path(os.getenv("COA_PROJECT_DIR", str(_PROJECT_ROOT / "COA" / "COA_Project"))).expanduser().resolve()
+
+
+def _coa_flask_base() -> str:
+    return os.getenv("COA_FLASK_URL", "http://127.0.0.1:5050").rstrip("/")
+
+
+async def _probe_coa_flask() -> dict[str, Any]:
+    base = _coa_flask_base()
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{base}/api/health")
+            body: Any
+            try:
+                body = r.json()
+            except Exception:
+                body = {"raw": (r.text or "")[:500]}
+            return {
+                "reachable": r.status_code == 200,
+                "status_code": r.status_code,
+                "url": f"{base}/api/health",
+                "body": body,
+            }
+    except Exception as exc:
+        return {"reachable": False, "url": f"{base}/api/health", "error": str(exc)}
+
 
 class ArchiveBody(BaseModel):
     path: str = Field(..., min_length=1, description="Absolute or relative path to archive")
@@ -69,6 +99,58 @@ class ArchiveBody(BaseModel):
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/integrations")
+async def api_integrations():
+    """Manifest for merged Council + COA (Flask) stack."""
+    coa_web_api = _COA_PROJECT / "web_api.py"
+    coa_available = coa_web_api.is_file()
+    probe = await _probe_coa_flask() if coa_available else {"reachable": False, "error": "COA web_api.py not found"}
+
+    return {
+        "council": {
+            "fastapi": True,
+            "default_url": "http://127.0.0.1:8765",
+            "endpoints": [
+                "/api/health",
+                "/api/scan-system",
+                "/api/scan-archive",
+                "/api/verify-audit",
+                "/api/baseline-stats",
+                "/api/list-quarantine",
+                "/api/commands",
+            ],
+        },
+        "coa": {
+            "project_dir": str(_COA_PROJECT),
+            "web_api_path": str(coa_web_api),
+            "available": coa_available,
+            "flask_base_url": _coa_flask_base(),
+            "flask_probe": probe,
+            "endpoints_via_vite_proxy": [
+                "/coa-api/health",
+                "/coa-api/health/ollama",
+                "/coa-api/health/llm",
+                "/coa-api/scan (POST)",
+                "/coa-api/last/defense-context",
+                "/coa-api/last/mitre-deep",
+                "/coa-api/last/ot-ics",
+                "/coa-api/reports/txt",
+                "/coa-api/reports/html",
+            ],
+        },
+        "vite": {
+            "default_url": "http://127.0.0.1:5173",
+            "note": "Proxy /api -> 8765, /coa-api -> 5050",
+        },
+    }
+
+
+@app.get("/api/coa/health-proxy")
+async def api_coa_health_proxy():
+    """Lightweight check that COA Flask is up (same as integrations.coa.flask_probe)."""
+    return await _probe_coa_flask()
 
 
 @app.get("/api/commands")

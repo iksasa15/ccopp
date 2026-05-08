@@ -103,6 +103,50 @@ python run.py list-quarantine        # عرض الملفات في الحجر
 
 ---
 
+## Merged Mode — Council + COA (`COA/COA_Project`)
+
+يعمل المشروع الحالي (LangGraph + FastAPI) بجانب **COA** (Flask + React خاص به) دون دمج تبعيات Python في venv واحد. الواجهة الموحّدة في [`web/`](web/) تستخدم Vite كـ reverse proxy:
+
+| الخدمة | المنفذ | الوصف |
+|--------|--------|--------|
+| Council FastAPI | **8765** | `uvicorn api.app:app` — مسارات `/api/*` |
+| COA Flask (`web_api.py`) | **5050** | من مجلد `COA/COA_Project` — مسارات `/api/*` داخل Flask |
+| واجهة Vite الموحّدة | **5173** | `npm run dev` داخل `web/` — يوجّه `/api` → 8765 و `/coa-api` → 5050 |
+
+### إعداد سريع
+
+```bash
+cp .env.example .env   # اختياري
+make setup             # تثبيت council + COA venv + npm في web/
+make dev               # يشغّل 8765 + 5050 + 5173 (Ctrl+C يوقف الخلفيات)
+```
+
+أو يدوياً من جذر المستودع:
+
+```bash
+bash scripts/start_merged.sh
+```
+
+لإيقاف الخدمات الخلفية:
+
+```bash
+make stop
+# أو
+bash scripts/stop_merged.sh
+```
+
+### واجهة المتصفح
+
+افتح **http://127.0.0.1:5173** — تبويب **Council** لأوامر المشروع الحالي، **COA** لمسارات Flask عبر `/coa-api/*`، **الحالة** لجلب `GET /api/integrations` و `GET /api/coa/health-proxy`.
+
+### ملاحظات
+
+- COA يحتاج **venv** داخل `COA/COA_Project` (أو `.venv`)؛ إن لم يوجد، ثبّت يدوياً: `cd COA/COA_Project && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt`
+- نماذج Ollama قد تختلف بين المشروعين؛ راجع `config/settings.yaml` و `COA/COA_Project/.env`
+- `gui.py` (Tkinter) اختياري على macOS وقد يحتاج Python مبني مع Tk
+
+---
+
 ## نتائج الاختبارات
 
 ```
@@ -167,6 +211,13 @@ council_of_agents_v2/
 ├── data/                        # Runtime data (created at startup)
 ├── logs/
 │
+├── api/                         # FastAPI للواجهة الموحّدة (8765)
+├── web/                         # React + Vite (5173، proxy لـ Council + COA)
+├── COA/COA_Project/             # مشروع COA (Flask 5050، اختياري)
+├── Makefile                   # setup / dev / build / test / clean / stop
+├── scripts/start_merged.sh    # تشغيل الدمج (8765+5050+5173)
+├── scripts/stop_merged.sh
+├── .env.example
 ├── run.py                       # CLI entry point
 ├── run_as_admin.bat             # Windows launcher (UAC)
 ├── run_as_admin.ps1             # PowerShell launcher (UAC)

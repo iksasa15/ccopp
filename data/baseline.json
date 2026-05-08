@@ -9218,8 +9218,8 @@
   "uarpassetmanager": {
     "name": "uarpassetmanager",
     "exe_paths": [
-      "/usr/libexec/uarpassetmanagerd",
-      "/system/library/privateframeworks/uarpassetmanager.framework/xpcservices/uarpassetmanagerservicemobileasset.xpc/contents/macos/uarpassetmanagerservicemobileasset"
+      "/system/library/privateframeworks/uarpassetmanager.framework/xpcservices/uarpassetmanagerservicemobileasset.xpc/contents/macos/uarpassetmanagerservicemobileasset",
+      "/usr/libexec/uarpassetmanagerd"
     ],
     "typical_parents": [
       "launchd"
@@ -10541,8 +10541,8 @@
   "chrome_crashpad_handler": {
     "name": "chrome_crashpad_handler",
     "exe_paths": [
-      "/applications/discord.app/contents/frameworks/electron framework.framework/versions/a/helpers/chrome_crashpad_handler",
-      "/applications/cursor.app/contents/frameworks/electron framework.framework/versions/a/helpers/chrome_crashpad_handler"
+      "/applications/cursor.app/contents/frameworks/electron framework.framework/versions/a/helpers/chrome_crashpad_handler",
+      "/applications/discord.app/contents/frameworks/electron framework.framework/versions/a/helpers/chrome_crashpad_handler"
     ],
     "typical_parents": [
       "launchd"
