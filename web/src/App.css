@@ -273,9 +273,9 @@
 }
 
 .scan-mode-btn {
-  border: 1px solid rgba(45, 90, 72, 0.55);
-  background: rgba(10, 28, 20, 0.92);
-  color: #b8d4c8;
+  border: 1px solid rgba(110, 231, 183, 0.55);
+  background: rgba(6, 22, 14, 0.55);
+  color: #ecfdf5;
   padding: 0.45rem 0.75rem;
   border-radius: 9px;
   font-size: 0.8rem;
@@ -284,11 +284,25 @@
   transition: all 0.2s ease;
 }
 
-.scan-mode-btn.active {
-  color: #052e1a;
-  border-color: transparent;
-  background: linear-gradient(180deg, #a7f3d0, #34d399);
-  box-shadow: 0 10px 20px rgba(52, 211, 153, 0.28);
+.scan-mode-btn:hover:not(:disabled) {
+  border-color: rgba(110, 231, 183, 0.85);
+  background: rgba(52, 211, 153, 0.12);
+  color: #ffffff;
+}
+
+.scan-mode-switch .scan-mode-btn.active {
+  color: #f0fdf4;
+  border-color: rgba(16, 185, 129, 0.95);
+  background: linear-gradient(165deg, #10b981 0%, #059669 45%, #047857 100%);
+  box-shadow:
+    0 0 0 1px rgba(167, 243, 208, 0.35),
+    0 10px 22px rgba(5, 150, 105, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.scan-mode-switch .scan-mode-btn.active:hover:not(:disabled) {
+  filter: brightness(1.06);
+  color: #ffffff;
 }
 
 .btn {
