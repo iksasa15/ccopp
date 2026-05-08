@@ -307,6 +307,61 @@ export default function App() {
     []
   );
 
+  const aggregateStats = useCallback((data: unknown) => {
+    let critical = 0;
+    let high = 0;
+    let medium = 0;
+    let low = 0;
+    let total = 0;
+    if (!data || typeof data !== "object") {
+      return { critical, high, medium, low, total, score: 0 };
+    }
+    const obj = data as JsonRecord;
+    critical += Number(obj.critical ?? 0) || 0;
+    high += Number(obj.high ?? 0) || 0;
+    medium += Number(obj.medium ?? 0) || 0;
+    low += Number(obj.low ?? 0) || 0;
+    total += Number(obj.total_threats ?? 0) || 0;
+
+    const decision =
+      obj.decision && typeof obj.decision === "object" ? (obj.decision as JsonRecord) : null;
+    if (decision && Array.isArray(decision.primary_findings)) {
+      for (const f of decision.primary_findings as JsonRecord[]) {
+        const lvl = String(f.threat_level ?? "").toLowerCase();
+        if (lvl === "critical") critical += 1;
+        else if (lvl === "high") high += 1;
+        else if (lvl === "medium") medium += 1;
+        else if (lvl === "low") low += 1;
+      }
+      if (total === 0) total = (decision.primary_findings as unknown[]).length;
+    }
+    const fs =
+      obj.filesystem_scan && typeof obj.filesystem_scan === "object"
+        ? (obj.filesystem_scan as JsonRecord)
+        : null;
+    if (fs && Number(obj.total_threats ?? 0) === 0) {
+      const fsCount = Number(fs.findings_count ?? 0) || 0;
+      if (fsCount > 0) {
+        medium += fsCount;
+        total += fsCount;
+      }
+    }
+    const dfa =
+      obj.deep_file_analysis && typeof obj.deep_file_analysis === "object"
+        ? (obj.deep_file_analysis as JsonRecord)
+        : null;
+    if (dfa) {
+      const susp = Number(dfa.suspicious_count ?? 0) || 0;
+      if (susp > 0) {
+        high += susp;
+        total += susp;
+      }
+    }
+    if (total === 0) total = critical + high + medium + low;
+    const score = Math.min(100, critical * 35 + high * 20 + medium * 8 + low * 3);
+    return { critical, high, medium, low, total, score };
+  }, []);
+
   const recordHistory = useCallback(
     (
       label: string,
@@ -316,7 +371,9 @@ export default function App() {
       ok: boolean,
       data: unknown
     ) => {
-      const obj = (data && typeof data === "object" ? (data as JsonRecord) : {}) as JsonRecord;
+      const stats = aggregateStats(data);
+      const obj =
+        data && typeof data === "object" ? (data as JsonRecord) : ({} as JsonRecord);
       const entry: ScanHistoryEntry = {
         id: `${startedAt}-${Math.random().toString(36).slice(2, 8)}`,
         startedAt,
@@ -325,24 +382,19 @@ export default function App() {
         mode,
         label,
         ok,
-        totalThreats: Number(obj.total_threats ?? 0) || 0,
-        critical: Number(obj.critical ?? 0) || 0,
-        high: Number(obj.high ?? 0) || 0,
-        score: 0,
+        totalThreats: stats.total,
+        critical: stats.critical,
+        high: stats.high,
+        score: stats.score,
         scanId: typeof obj.scan_id === "string" ? obj.scan_id : undefined,
       };
-      const c = entry.critical;
-      const h = entry.high;
-      const m = Number(obj.medium ?? 0) || 0;
-      const l = Number(obj.low ?? 0) || 0;
-      entry.score = Math.min(100, c * 35 + h * 20 + m * 8 + l * 3);
       setHistory((prev) => {
         const next = [entry, ...prev].slice(0, HISTORY_MAX);
         saveHistory(next);
         return next;
       });
     },
-    []
+    [aggregateStats]
   );
 
   const runJson = useCallback(
@@ -502,26 +554,85 @@ export default function App() {
   }, [refreshLlmConnectionStatus]);
 
   const dashboardStats = useMemo(() => {
-    if (result.kind !== "success" && result.kind !== "error") {
-      return {
-        totalThreats: 0,
-        critical: 0,
-        high: 0,
-        medium: 0,
-        low: 0,
-        highConfidence: 0,
-        score: 0,
-      };
-    }
+    const empty = {
+      totalThreats: 0,
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      highConfidence: 0,
+      score: 0,
+    };
+    if (result.kind !== "success" && result.kind !== "error") return empty;
     const data = (result.data && typeof result.data === "object"
       ? (result.data as JsonRecord)
       : {}) as JsonRecord;
-    const totalThreats = Number(data.total_threats ?? 0) || 0;
-    const critical = Number(data.critical ?? 0) || 0;
-    const high = Number(data.high ?? 0) || 0;
-    const medium = Number(data.medium ?? 0) || 0;
-    const low = Number(data.low ?? 0) || 0;
-    const highConfidence = Number(data.high_confidence_threats ?? 0) || 0;
+
+    // Quick scan: flat fields are present.
+    let critical = Number(data.critical ?? 0) || 0;
+    let high = Number(data.high ?? 0) || 0;
+    let medium = Number(data.medium ?? 0) || 0;
+    let low = Number(data.low ?? 0) || 0;
+    let highConfidence = Number(data.high_confidence_threats ?? 0) || 0;
+    let totalThreats = Number(data.total_threats ?? 0) || 0;
+
+    // Deep scan: aggregate from decision.primary_findings.
+    const decision =
+      data.decision && typeof data.decision === "object"
+        ? (data.decision as JsonRecord)
+        : null;
+    if (decision) {
+      const findings = Array.isArray(decision.primary_findings)
+        ? (decision.primary_findings as JsonRecord[])
+        : [];
+      for (const f of findings) {
+        const lvl = String(f.threat_level ?? "").toLowerCase();
+        if (lvl === "critical") critical += 1;
+        else if (lvl === "high") high += 1;
+        else if (lvl === "medium") medium += 1;
+        else if (lvl === "low") low += 1;
+        const conf = Number(f.confidence ?? 0);
+        if (conf >= 0.7 && (lvl === "high" || lvl === "critical")) {
+          highConfidence += 1;
+        }
+      }
+      if (totalThreats === 0) totalThreats = findings.length;
+    }
+
+    // Filesystem heuristic findings count as medium-severity additions.
+    const fs =
+      data.filesystem_scan && typeof data.filesystem_scan === "object"
+        ? (data.filesystem_scan as JsonRecord)
+        : null;
+    if (fs) {
+      const fsCount = Number(fs.findings_count ?? 0) || 0;
+      if (fsCount > 0) {
+        // Only add to medium if not already counted in flat quick-scan response.
+        if (Number(data.total_threats ?? 0) === 0) {
+          medium += fsCount;
+          totalThreats += fsCount;
+        }
+      }
+    }
+
+    // LLM deep-file analysis: each "suspicious" verdict adds to high.
+    const dfa =
+      data.deep_file_analysis && typeof data.deep_file_analysis === "object"
+        ? (data.deep_file_analysis as JsonRecord)
+        : null;
+    if (dfa) {
+      const susp = Number(dfa.suspicious_count ?? 0) || 0;
+      if (susp > 0) {
+        high += susp;
+        highConfidence += susp;
+        totalThreats += susp;
+      }
+    }
+
+    if (totalThreats === 0) {
+      totalThreats = critical + high + medium + low;
+    }
+
     const score = Math.min(100, critical * 35 + high * 20 + medium * 8 + low * 3);
     return { totalThreats, critical, high, medium, low, highConfidence, score };
   }, [result]);
