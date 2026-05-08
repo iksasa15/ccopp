@@ -3,7 +3,7 @@ import { BrandLogo, StatusPill } from "./Brand";
 import "./App.css";
 
 type LoadStatus = "idle" | "loading" | "error";
-type MainTab = "dashboard" | "council" | "coa" | "status";
+type MainTab = "home" | "council" | "coa";
 type JsonRecord = Record<string, unknown>;
 type ResultState =
   | { kind: "idle"; message: string }
@@ -55,7 +55,7 @@ function getKnownCoaHint(body: unknown): string | null {
 }
 
 export default function App() {
-  const [mainTab, setMainTab] = useState<MainTab>("dashboard");
+  const [mainTab, setMainTab] = useState<MainTab>("home");
   const [archivePath, setArchivePath] = useState("");
   const [result, setResult] = useState<ResultState>({
     kind: "idle",
@@ -410,17 +410,33 @@ export default function App() {
     return { totalThreats, critical, high, medium, low, highConfidence, score };
   }, [result]);
 
+  const startCouncilScan = useCallback(async () => {
+    const ready = await ensureLlmReady("council");
+    if (!ready) return;
+    await runJson(
+      councilScanMode === "deep"
+        ? "فحص النظام العميق (Council)"
+        : "فحص النظام السريع (Council)",
+      () =>
+        fetch("/api/scan-system", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: councilScanMode }),
+        })
+    );
+  }, [councilScanMode, ensureLlmReady, runJson]);
+
   return (
     <div className="app">
-      <header className="brand-bar">
+      <header className="brand-bar brand-bar--v2">
         <div className="brand-bar__left">
           <BrandLogo size={56} />
           <div className="brand-text">
             <h1>
-              مجلس الوكلاء <span className="brand-sep">·</span> COA
+              NEXUS SHIELD <span className="brand-sep">·</span> مركز الحماية الذكي
             </h1>
             <p className="brand-tag">
-              منصة SOC محلية متعددة الوكلاء — Local Multi-Agent SOC
+              Cyber Defense Command · Unified AI Security Console
             </p>
           </div>
         </div>
@@ -438,15 +454,62 @@ export default function App() {
         </div>
       </header>
 
+      <section className="hero-panel action-card">
+        <div className="hero-copy">
+          <p className="hero-kicker">جاهز خلال ثوانٍ</p>
+          <h2>ابدأ الفحص الآن من نفس الصفحة</h2>
+          <p>
+            اختر وضع الفحص ثم اضغط زر البدء. تم دمج الحالة، الفحص، والإحصائيات الأساسية
+            في واجهة واحدة لتكون أسرع وأسهل.
+          </p>
+        </div>
+        <div className="hero-actions">
+          <div className="scan-mode-switch" role="group" aria-label="وضع الفحص">
+            <button
+              type="button"
+              className={`scan-mode-btn ${councilScanMode === "quick" ? "active" : ""}`}
+              onClick={() => setCouncilScanMode("quick")}
+              disabled={loadStatus === "loading"}
+            >
+              فحص سريع (10 ثوانٍ)
+            </button>
+            <button
+              type="button"
+              className={`scan-mode-btn ${councilScanMode === "deep" ? "active" : ""}`}
+              onClick={() => setCouncilScanMode("deep")}
+              disabled={loadStatus === "loading"}
+            >
+              فحص عميق (LLM + Agent)
+            </button>
+          </div>
+          <button
+            type="button"
+            className="btn primary btn-start"
+            disabled={loadStatus === "loading"}
+            onClick={startCouncilScan}
+          >
+            {councilScanMode === "deep" ? "ابدأ الفحص العميق" : "ابدأ الفحص السريع"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={loadStatus === "loading"}
+            onClick={testLlmStatus}
+          >
+            تحقق من جاهزية LLM
+          </button>
+        </div>
+      </section>
+
       <nav className="tabs" role="tablist" aria-label="أقسام التطبيق">
         <button
           type="button"
           role="tab"
-          aria-selected={mainTab === "dashboard"}
-          className={`tab ${mainTab === "dashboard" ? "active" : ""}`}
-          onClick={() => setMainTab("dashboard")}
+          aria-selected={mainTab === "home"}
+          className={`tab ${mainTab === "home" ? "active" : ""}`}
+          onClick={() => setMainTab("home")}
         >
-          Dashboard
+          الرئيسية
         </button>
         <button
           type="button"
@@ -466,22 +529,13 @@ export default function App() {
         >
           COA
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mainTab === "status"}
-          className={`tab ${mainTab === "status" ? "active" : ""}`}
-          onClick={() => setMainTab("status")}
-        >
-          الحالة / التكامل
-        </button>
       </nav>
 
-      {mainTab === "dashboard" && (
+      {mainTab === "home" && (
         <section className="action-card dashboard-panel">
           <div className="panel-head">
-            <h2 className="panel-title">لوحة التحليل</h2>
-            <p className="panel-meta">قراءة سريعة لأهم أرقام الفحص الحالي</p>
+            <h2 className="panel-title">لوحة التشغيل الموحدة</h2>
+            <p className="panel-meta">عرض سريع للوضع الأمني الحالي</p>
           </div>
 
           <div className="kpi-grid">
@@ -556,8 +610,32 @@ export default function App() {
               label={llmPillLabel("LLM COA", coaLlmState)}
             />
             <span className="dash-hint">
-              حدّث الأرقام عبر تشغيل فحص جديد من تبويب Council أو COA
+              التحديث يتم مباشرة بعد الضغط على زر «ابدأ الفحص»
             </span>
+          </div>
+          <div className="actions actions--compact">
+            <button
+              type="button"
+              className="btn"
+              disabled={loadStatus === "loading"}
+              onClick={() =>
+                runJson("التكامل / integrations", () =>
+                  fetch("/api/integrations")
+                )
+              }
+            >
+              جلب حالة التكامل
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={loadStatus === "loading"}
+              onClick={() =>
+                runJson("COA health-proxy", () => fetch("/api/coa/health-proxy"))
+              }
+            >
+              فحص Proxy COA
+            </button>
           </div>
         </section>
       )}
@@ -565,49 +643,17 @@ export default function App() {
       {mainTab === "council" && (
         <section className="action-card">
           <div className="panel-head">
-            <h2 className="panel-title">أدوات Council</h2>
-            <p className="panel-meta">تشغيل الفحص الأساسي، التدقيق، وإدارة الأرشيف</p>
+            <h2 className="panel-title">Council — أوامر متقدمة</h2>
+            <p className="panel-meta">للعمليات اليدوية والتدقيقات الإضافية</p>
           </div>
           <section className="actions">
-            <div className="scan-mode-switch" role="group" aria-label="وضع فحص Council">
-              <button
-                type="button"
-                className={`scan-mode-btn ${councilScanMode === "quick" ? "active" : ""}`}
-                onClick={() => setCouncilScanMode("quick")}
-                disabled={loadStatus === "loading"}
-              >
-                فحص سريع (10 ثوانٍ)
-              </button>
-              <button
-                type="button"
-                className={`scan-mode-btn ${councilScanMode === "deep" ? "active" : ""}`}
-                onClick={() => setCouncilScanMode("deep")}
-                disabled={loadStatus === "loading"}
-              >
-                فحص عميق (LLM + Agent)
-              </button>
-            </div>
             <button
               type="button"
               className="btn primary"
               disabled={loadStatus === "loading"}
-              onClick={async () => {
-                const ready = await ensureLlmReady("council");
-                if (!ready) return;
-                await runJson(
-                  councilScanMode === "deep"
-                    ? "فحص النظام العميق (Council)"
-                    : "فحص النظام السريع (Council)",
-                  () =>
-                    fetch("/api/scan-system", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ mode: councilScanMode }),
-                    })
-                );
-              }}
+              onClick={startCouncilScan}
             >
-              {councilScanMode === "deep" ? "ابدأ الفحص العميق" : "ابدأ الفحص السريع"}
+              بدء الفحص الحالي
             </button>
             <button
               type="button"
@@ -850,52 +896,6 @@ export default function App() {
               }
             >
               reports/mitre-navigator.json
-            </button>
-          </div>
-        </section>
-      )}
-
-      {mainTab === "status" && (
-        <section className="status-panel action-card">
-          <div className="panel-head">
-            <h2 className="panel-title">الحالة والتكامل</h2>
-            <p className="panel-meta">فحص جاهزية الخدمات والاتصال بين Council وCOA</p>
-          </div>
-          <p className="section-desc">
-            يجمع حالة Council FastAPI و COA Flask من الخادم نفسه (8765).
-          </p>
-          <div className="actions">
-            <button
-              type="button"
-              className="btn primary"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("التكامل / integrations", () =>
-                  fetch("/api/integrations")
-                )
-              }
-            >
-              جلب /api/integrations
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("COA health-proxy (من FastAPI)", () =>
-                  fetch("/api/coa/health-proxy")
-                )
-              }
-            >
-              /api/coa/health-proxy
-            </button>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={loadStatus === "loading"}
-              onClick={testLlmStatus}
-            >
-              اختبار LLM
             </button>
           </div>
         </section>
