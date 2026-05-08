@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { BrandLogo, StatusPill } from "./Brand";
 import "./App.css";
 
@@ -410,6 +410,14 @@ export default function App() {
     return { totalThreats, critical, high, medium, low, highConfidence, score };
   }, [result]);
 
+  const riskRingGradId = useId().replace(/:/g, "");
+  const riskRingDash = useMemo(() => {
+    const r = 44;
+    const c = 2 * Math.PI * r;
+    const p = Math.min(100, Math.max(0, dashboardStats.score));
+    return { c, offset: c * (1 - p / 100) };
+  }, [dashboardStats.score]);
+
   const startCouncilScan = useCallback(async () => {
     const ready = await ensureLlmReady("council");
     if (!ready) return;
@@ -526,267 +534,376 @@ export default function App() {
         <section className="action-card dashboard-panel">
           <div className="panel-head">
             <h2 className="panel-title">لوحة التشغيل الموحدة</h2>
-            <p className="panel-meta">عرض سريع للوضع الأمني الحالي</p>
+            <p className="panel-meta">Bento Grid — لمحة أمنية سريعة</p>
           </div>
 
-          <div className="kpi-grid">
-            <article className="kpi-card">
-              <p className="kpi-label">إجمالي التهديدات</p>
-              <p className="kpi-value">{dashboardStats.totalThreats}</p>
+          <div className="bento">
+            <article className="bento-tile bento-tile--span-2 bento-tile--row-2 bento-tile--feature">
+              <p className="bento-tile__head">Risk Score</p>
+              <div className="risk-ring">
+                <svg
+                  className="risk-ring__svg"
+                  width="108"
+                  height="108"
+                  viewBox="0 0 100 100"
+                  aria-hidden
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="44"
+                    fill="none"
+                    stroke="rgba(45,90,72,0.55)"
+                    strokeWidth="8"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="44"
+                    fill="none"
+                    stroke={`url(#${riskRingGradId})`}
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeDasharray={riskRingDash.c}
+                    strokeDashoffset={riskRingDash.offset}
+                    transform="rotate(-90 50 50)"
+                  />
+                  <defs>
+                    <linearGradient id={riskRingGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#6ee7b7" />
+                      <stop offset="100%" stopColor="#22c55e" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="risk-ring__text">
+                  <p className="risk-ring__pct">{dashboardStats.score}%</p>
+                  <p className="risk-ring__label">
+                    مؤشر مخاطر مبني على توزيع الشدة
+                  </p>
+                </div>
+              </div>
             </article>
-            <article className="kpi-card">
-              <p className="kpi-label">High Confidence</p>
-              <p className="kpi-value">{dashboardStats.highConfidence}</p>
-            </article>
-            <article className="kpi-card">
-              <p className="kpi-label">Critical</p>
-              <p className="kpi-value">{dashboardStats.critical}</p>
-            </article>
-            <article className="kpi-card">
-              <p className="kpi-label">Risk Score</p>
-              <p className="kpi-value">{dashboardStats.score}%</p>
-            </article>
-          </div>
 
-          <div className="severity-bars">
-            <div className="severity-row">
-              <span>Critical</span>
-              <div className="bar-track">
-                <div
-                  className="bar-fill critical"
-                  style={{ width: `${Math.min(100, dashboardStats.critical * 18)}%` }}
-                />
-              </div>
-              <strong>{dashboardStats.critical}</strong>
-            </div>
-            <div className="severity-row">
-              <span>High</span>
-              <div className="bar-track">
-                <div
-                  className="bar-fill high"
-                  style={{ width: `${Math.min(100, dashboardStats.high * 14)}%` }}
-                />
-              </div>
-              <strong>{dashboardStats.high}</strong>
-            </div>
-            <div className="severity-row">
-              <span>Medium</span>
-              <div className="bar-track">
-                <div
-                  className="bar-fill medium"
-                  style={{ width: `${Math.min(100, dashboardStats.medium * 12)}%` }}
-                />
-              </div>
-              <strong>{dashboardStats.medium}</strong>
-            </div>
-            <div className="severity-row">
-              <span>Low</span>
-              <div className="bar-track">
-                <div
-                  className="bar-fill low"
-                  style={{ width: `${Math.min(100, dashboardStats.low * 10)}%` }}
-                />
-              </div>
-              <strong>{dashboardStats.low}</strong>
-            </div>
-          </div>
+            <article className="bento-tile">
+              <p className="bento-tile__head">إجمالي التهديدات</p>
+              <p className="bento-tile__value bento-tile__value--sm">
+                {dashboardStats.totalThreats}
+              </p>
+            </article>
 
-          <div className="dashboard-foot">
-            <StatusPill
-              kind={llmPillKind(councilLlmState)}
-              label={llmPillLabel("LLM Council", councilLlmState)}
-            />
-            <StatusPill
-              kind={llmPillKind(coaLlmState)}
-              label={llmPillLabel("LLM COA", coaLlmState)}
-            />
-            <span className="dash-hint">
-              التحديث يتم مباشرة بعد الضغط على زر «ابدأ الفحص»
-            </span>
-          </div>
-          <div className="actions actions--compact">
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("التكامل / integrations", () =>
-                  fetch("/api/integrations")
-                )
-              }
+            <article
+              className={`bento-tile ${dashboardStats.highConfidence > 0 ? "bento-tile--warn" : ""}`}
             >
-              جلب حالة التكامل
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("COA health-proxy", () => fetch("/api/coa/health-proxy"))
-              }
+              <p className="bento-tile__head">High Confidence</p>
+              <p className="bento-tile__value bento-tile__value--sm">
+                {dashboardStats.highConfidence}
+              </p>
+            </article>
+
+            <article
+              className={`bento-tile ${dashboardStats.critical > 0 ? "bento-tile--danger" : ""}`}
             >
-              فحص Proxy COA
-            </button>
+              <p className="bento-tile__head">Critical</p>
+              <p className="bento-tile__value bento-tile__value--sm">
+                {dashboardStats.critical}
+              </p>
+            </article>
+
+            <article
+              className={`bento-tile ${dashboardStats.high > 0 ? "bento-tile--warn" : ""}`}
+            >
+              <p className="bento-tile__head">High</p>
+              <p className="bento-tile__value bento-tile__value--sm">
+                {dashboardStats.high}
+              </p>
+            </article>
+
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">توزيع الشدة</p>
+              <div className="bento-tile__body severity-bars--compact">
+                <div className="severity-row">
+                  <span>Critical</span>
+                  <div className="bar-track">
+                    <div
+                      className="bar-fill critical"
+                      style={{
+                        width: `${Math.min(100, dashboardStats.critical * 18)}%`,
+                      }}
+                    />
+                  </div>
+                  <strong>{dashboardStats.critical}</strong>
+                </div>
+                <div className="severity-row">
+                  <span>High</span>
+                  <div className="bar-track">
+                    <div
+                      className="bar-fill high"
+                      style={{
+                        width: `${Math.min(100, dashboardStats.high * 14)}%`,
+                      }}
+                    />
+                  </div>
+                  <strong>{dashboardStats.high}</strong>
+                </div>
+                <div className="severity-row">
+                  <span>Medium</span>
+                  <div className="bar-track">
+                    <div
+                      className="bar-fill medium"
+                      style={{
+                        width: `${Math.min(100, dashboardStats.medium * 12)}%`,
+                      }}
+                    />
+                  </div>
+                  <strong>{dashboardStats.medium}</strong>
+                </div>
+                <div className="severity-row">
+                  <span>Low</span>
+                  <div className="bar-track">
+                    <div
+                      className="bar-fill low"
+                      style={{
+                        width: `${Math.min(100, dashboardStats.low * 10)}%`,
+                      }}
+                    />
+                  </div>
+                  <strong>{dashboardStats.low}</strong>
+                </div>
+              </div>
+            </article>
+
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">حالة LLM</p>
+              <div className="bento-tile__body">
+                <div className="brand-status" style={{ justifyContent: "flex-start" }}>
+                  <StatusPill
+                    kind={llmPillKind(councilLlmState)}
+                    label={llmPillLabel("LLM Council", councilLlmState)}
+                  />
+                  <StatusPill
+                    kind={llmPillKind(coaLlmState)}
+                    label={llmPillLabel("LLM COA", coaLlmState)}
+                  />
+                </div>
+                <p className="dash-hint">
+                  يتحدث تلقائياً؛ أو بعد «ابدأ الفحص» وزر التحقق أدناه.
+                </p>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={testLlmStatus}
+                >
+                  تحقق من جاهزية LLM
+                </button>
+              </div>
+            </article>
+
+            <article className="bento-tile bento-tile--span-4">
+              <p className="bento-tile__head">إجراءات سريعة</p>
+              <div className="bento-btn-grid">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("التكامل / integrations", () =>
+                      fetch("/api/integrations")
+                    )
+                  }
+                >
+                  جلب حالة التكامل
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("COA health-proxy", () => fetch("/api/coa/health-proxy"))
+                  }
+                >
+                  فحص Proxy COA
+                </button>
+              </div>
+            </article>
           </div>
         </section>
       )}
 
       {mainTab === "council_coa" && (
-        <div className="unified-engines">
-          <section className="action-card unified-engines__panel">
-            <div className="panel-head">
-              <h2 className="panel-title">Council (FastAPI)</h2>
-              <p className="panel-meta">فحص النظام، التدقيق، والأرشيف</p>
-            </div>
-            <section className="actions">
-              <button
-                type="button"
-                className="btn primary"
-                disabled={loadStatus === "loading"}
-                onClick={startCouncilScan}
-              >
-                بدء فحص Council (نفس وضع الفحص أعلاه)
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("verify-audit", () => fetch("/api/verify-audit"))
-                }
-              >
-                verify-audit
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("baseline-stats", () => fetch("/api/baseline-stats"))
-                }
-              >
-                baseline-stats
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("list-quarantine", () => fetch("/api/list-quarantine"))
-                }
-              >
-                list-quarantine
-              </button>
-              <button
-                type="button"
-                className="btn ghost"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("مساعدة الأوامر", () => fetch("/api/commands"))
-                }
-              >
-                أوامر API (مساعدة)
-              </button>
-            </section>
-            <section className="archive-row">
-              <label htmlFor="archive-path">مسار الأرشيف — scan-archive</label>
-              <div className="archive-input">
-                <input
-                  id="archive-path"
-                  type="text"
-                  placeholder="/path/to/archive.zip"
-                  value={archivePath}
-                  onChange={(e) => setArchivePath(e.target.value)}
-                  dir="ltr"
-                />
+        <section className="action-card dashboard-panel">
+          <div className="panel-head">
+            <h2 className="panel-title">Council + COA</h2>
+            <p className="panel-meta">Bento Grid — FastAPI 8765 و Flask 5050</p>
+          </div>
+
+          <div className="bento">
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">Council — فحص النظام</p>
+              <div className="bento-tile__body">
+                <p className="bento-tile__meta">
+                  يستخدم نفس وضع الفحص المختار في الشريط العلوي (سريع / عميق).
+                </p>
                 <button
                   type="button"
                   className="btn primary"
-                  disabled={loadStatus === "loading" || !archivePath.trim()}
+                  disabled={loadStatus === "loading"}
+                  onClick={startCouncilScan}
+                >
+                  بدء فحص Council
+                </button>
+              </div>
+            </article>
+
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">COA — صحة الخدمة</p>
+              <div className="bento-btn-grid">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
                   onClick={() =>
-                    runJson("فحص الأرشيف", () =>
-                      fetch("/api/scan-archive", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ path: archivePath.trim() }),
-                      })
+                    runJson("COA health", () => fetch("/coa-api/health"), "شغّل COA Flask على 5050")
+                  }
+                >
+                  COA /api/health
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("Ollama diagnose", () =>
+                      fetch("/coa-api/health/ollama")
                     )
                   }
                 >
-                  فحص الأرشيف
+                  health/ollama
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("LLM diagnose", () => fetch("/coa-api/health/llm"))
+                  }
+                >
+                  health/llm
                 </button>
               </div>
-            </section>
-          </section>
+            </article>
 
-          <section className="coa-panel action-card unified-engines__panel">
-            <div className="panel-head">
-              <h2 className="panel-title">COA (Flask)</h2>
-              <p className="panel-meta">فحص متقدم، MITRE، OT، وتقارير</p>
-            </div>
-            <p className="coa-hint">
-              يتطلب تشغيل <code>web_api.py</code> على المنفذ <code>5050</code>. بعد{" "}
-              <strong>فحص COA</strong> يمكن جلب defense / MITRE / OT من آخر مسح، أو تنزيل التقارير.
-            </p>
-            <div className="coa-options">
-              <label className="chk">
-                <input
-                  type="checkbox"
-                  checked={coaDryRun}
-                  onChange={(e) => setCoaDryRun(e.target.checked)}
-                />
-                dry_run
-              </label>
-              <label className="chk">
-                <input
-                  type="checkbox"
-                  checked={coaUseCouncil}
-                  onChange={(e) => setCoaUseCouncil(e.target.checked)}
-                />
-                use_council (CrewAI — أبطأ)
-              </label>
-              <label className="chk">
-                <input
-                  type="checkbox"
-                  checked={coaPresentationDemo}
-                  onChange={(e) => setCoaPresentationDemo(e.target.checked)}
-                />
-                presentation_demo (OT وهمي)
-              </label>
-            </div>
-            <div className="actions">
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("COA health", () => fetch("/coa-api/health"), "شغّل COA Flask على 5050")
-                }
-              >
-                COA /api/health
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("Ollama diagnose", () =>
-                    fetch("/coa-api/health/ollama")
-                  )
-                }
-              >
-                health/ollama
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("LLM diagnose", () => fetch("/coa-api/health/llm"))
-                }
-              >
-                health/llm
-              </button>
+            <article className="bento-tile bento-tile--span-2 bento-tile--row-2">
+              <p className="bento-tile__head">Council — تدقيق ومساعدة</p>
+              <div className="bento-btn-grid">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("verify-audit", () => fetch("/api/verify-audit"))
+                  }
+                >
+                  verify-audit
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("baseline-stats", () => fetch("/api/baseline-stats"))
+                  }
+                >
+                  baseline-stats
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("list-quarantine", () => fetch("/api/list-quarantine"))
+                  }
+                >
+                  list-quarantine
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("مساعدة الأوامر", () => fetch("/api/commands"))
+                  }
+                >
+                  أوامر API (مساعدة)
+                </button>
+              </div>
+            </article>
+
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">Council — أرشيف</p>
+              <section className="archive-row">
+                <label htmlFor="archive-path">مسار الأرشيف — scan-archive</label>
+                <div className="archive-input">
+                  <input
+                    id="archive-path"
+                    type="text"
+                    placeholder="/path/to/archive.zip"
+                    value={archivePath}
+                    onChange={(e) => setArchivePath(e.target.value)}
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={loadStatus === "loading" || !archivePath.trim()}
+                    onClick={() =>
+                      runJson("فحص الأرشيف", () =>
+                        fetch("/api/scan-archive", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ path: archivePath.trim() }),
+                        })
+                      )
+                    }
+                  >
+                    فحص الأرشيف
+                  </button>
+                </div>
+              </section>
+            </article>
+
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">COA — فحص كامل</p>
+              <p className="coa-hint">
+                يتطلب <code>web_api.py</code> على <code>5050</code>. بعد الفحص يمكن جلب آخر
+                defense / MITRE / OT أو تنزيل التقارير.
+              </p>
+              <div className="coa-options">
+                <label className="chk">
+                  <input
+                    type="checkbox"
+                    checked={coaDryRun}
+                    onChange={(e) => setCoaDryRun(e.target.checked)}
+                  />
+                  dry_run
+                </label>
+                <label className="chk">
+                  <input
+                    type="checkbox"
+                    checked={coaUseCouncil}
+                    onChange={(e) => setCoaUseCouncil(e.target.checked)}
+                  />
+                  use_council (CrewAI — أبطأ)
+                </label>
+                <label className="chk">
+                  <input
+                    type="checkbox"
+                    checked={coaPresentationDemo}
+                    onChange={(e) => setCoaPresentationDemo(e.target.checked)}
+                  />
+                  presentation_demo (OT وهمي)
+                </label>
+              </div>
               <button
                 type="button"
                 className="btn primary"
@@ -809,87 +926,95 @@ export default function App() {
               >
                 فحص COA (POST /scan)
               </button>
-            </div>
-            <div className="actions">
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("آخر defense-context", () =>
-                    fetch("/coa-api/last/defense-context")
-                  )
-                }
-              >
-                last/defense-context
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("آخر mitre-deep", () => fetch("/coa-api/last/mitre-deep"))
-                }
-              >
-                last/mitre-deep
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("آخر ot-ics", () => fetch("/coa-api/last/ot-ics"))
-                }
-              >
-                last/ot-ics
-              </button>
-            </div>
-            <div className="actions">
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runDownload("تقرير TXT", "/coa-api/reports/txt")
-                }
-              >
-                تنزيل reports/txt
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runDownload("تقرير HTML", "/coa-api/reports/html")
-                }
-              >
-                تنزيل reports/html
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runDownload("incident", "/coa-api/reports/incident")
-                }
-              >
-                تنزيل reports/incident
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadStatus === "loading"}
-                onClick={() =>
-                  runJson("mitre-navigator.json", () =>
-                    fetch("/coa-api/reports/mitre-navigator.json")
-                  )
-                }
-              >
-                reports/mitre-navigator.json
-              </button>
-            </div>
-          </section>
-        </div>
+            </article>
+
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">COA — آخر مسح</p>
+              <div className="bento-btn-grid">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("آخر defense-context", () =>
+                      fetch("/coa-api/last/defense-context")
+                    )
+                  }
+                >
+                  last/defense-context
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("آخر mitre-deep", () => fetch("/coa-api/last/mitre-deep"))
+                  }
+                >
+                  last/mitre-deep
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("آخر ot-ics", () => fetch("/coa-api/last/ot-ics"))
+                  }
+                >
+                  last/ot-ics
+                </button>
+              </div>
+            </article>
+
+            <article className="bento-tile bento-tile--span-2">
+              <p className="bento-tile__head">COA — تقارير</p>
+              <div className="bento-btn-grid">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runDownload("تقرير TXT", "/coa-api/reports/txt")
+                  }
+                >
+                  تنزيل reports/txt
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runDownload("تقرير HTML", "/coa-api/reports/html")
+                  }
+                >
+                  تنزيل reports/html
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runDownload("incident", "/coa-api/reports/incident")
+                  }
+                >
+                  تنزيل reports/incident
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={loadStatus === "loading"}
+                  onClick={() =>
+                    runJson("mitre-navigator.json", () =>
+                      fetch("/coa-api/reports/mitre-navigator.json")
+                    )
+                  }
+                >
+                  reports/mitre-navigator.json
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
       )}
 
       {lastError && (
