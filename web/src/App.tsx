@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrandLogo, StatusPill } from "./Brand";
 import "./App.css";
 
@@ -10,6 +10,7 @@ type ResultState =
   | { kind: "loading"; message: string }
   | { kind: "success"; data: unknown }
   | { kind: "error"; data: unknown };
+type LlmConnectionState = "checking" | "connected" | "disconnected";
 
 function formatPrimitive(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -66,6 +67,89 @@ export default function App() {
   const [coaDryRun, setCoaDryRun] = useState(true);
   const [coaUseCouncil, setCoaUseCouncil] = useState(false);
   const [coaPresentationDemo, setCoaPresentationDemo] = useState(false);
+  const [councilLlmState, setCouncilLlmState] =
+    useState<LlmConnectionState>("checking");
+  const [coaLlmState, setCoaLlmState] = useState<LlmConnectionState>("checking");
+
+  const ensureLlmReady = useCallback(
+    async (target: "council" | "coa"): Promise<boolean> => {
+      try {
+        if (target === "coa") {
+          const ollamaRes = await fetch("/coa-api/health/ollama");
+          const ollamaBody = await parseJsonSafe(ollamaRes);
+          if (!ollamaRes.ok || (ollamaBody && typeof ollamaBody === "object" && (ollamaBody as JsonRecord).ok === false)) {
+            setLoadStatus("error");
+            setLastError("LLM غير جاهزة في COA (Ollama).");
+            setResult({
+              kind: "error",
+              data: {
+                error: "LLM غير جاهزة في COA (Ollama)",
+                hint: "شغّل Ollama وتأكد من تنزيل النموذج، ثم أعد المحاولة.",
+                details: ollamaBody,
+              },
+            });
+            return false;
+          }
+
+          const llmRes = await fetch("/coa-api/health/llm");
+          const llmBody = await parseJsonSafe(llmRes);
+          if (!llmRes.ok || (llmBody && typeof llmBody === "object" && (llmBody as JsonRecord).ok === false)) {
+            setLoadStatus("error");
+            setLastError("LLM غير جاهزة في COA.");
+            setResult({
+              kind: "error",
+              data: {
+                error: "LLM غير جاهزة في COA",
+                hint: "تأكد من أن health/llm يرجع ok قبل الفحص.",
+                details: llmBody,
+              },
+            });
+            return false;
+          }
+          return true;
+        }
+
+        const integrationsRes = await fetch("/api/integrations");
+        const integrationsBody = await parseJsonSafe(integrationsRes);
+        const llmOk =
+          integrationsRes.ok &&
+          integrationsBody &&
+          typeof integrationsBody === "object" &&
+          (integrationsBody as JsonRecord).council &&
+          typeof (integrationsBody as JsonRecord).council === "object" &&
+          ((integrationsBody as JsonRecord).council as JsonRecord).fastapi === true;
+
+        if (!llmOk) {
+          setLoadStatus("error");
+          setLastError("LLM غير جاهزة في Council.");
+          setResult({
+            kind: "error",
+            data: {
+              error: "LLM غير جاهزة في Council",
+              hint: "تأكد من تكامل LLM عبر /api/integrations قبل scan-system.",
+              details: integrationsBody,
+            },
+          });
+          return false;
+        }
+
+        return true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setLoadStatus("error");
+        setLastError(msg);
+        setResult({
+          kind: "error",
+          data: {
+            error: "تعذر التحقق من جاهزية LLM",
+            details: msg,
+          },
+        });
+        return false;
+      }
+    },
+    []
+  );
 
   const showResult = useCallback((data: unknown) => {
     setResult((prev) => ({
@@ -169,6 +253,134 @@ export default function App() {
     [showResult]
   );
 
+  const refreshLlmConnectionStatus = useCallback(async () => {
+    try {
+      const [integrationsRes, coaOllamaRes, coaLlmRes] = await Promise.all([
+        fetch("/api/integrations"),
+        fetch("/coa-api/health/ollama"),
+        fetch("/coa-api/health/llm"),
+      ]);
+      const [integrationsBody, coaOllamaBody, coaLlmBody] = await Promise.all([
+        parseJsonSafe(integrationsRes),
+        parseJsonSafe(coaOllamaRes),
+        parseJsonSafe(coaLlmRes),
+      ]);
+
+      const councilOk =
+        integrationsRes.ok &&
+        integrationsBody &&
+        typeof integrationsBody === "object" &&
+        (integrationsBody as JsonRecord).council &&
+        typeof (integrationsBody as JsonRecord).council === "object" &&
+        ((integrationsBody as JsonRecord).council as JsonRecord).fastapi === true;
+      const coaOllamaOk =
+        coaOllamaRes.ok &&
+        coaOllamaBody &&
+        typeof coaOllamaBody === "object" &&
+        (coaOllamaBody as JsonRecord).ok !== false;
+      const coaLlmOk =
+        coaLlmRes.ok &&
+        coaLlmBody &&
+        typeof coaLlmBody === "object" &&
+        (coaLlmBody as JsonRecord).ok !== false;
+
+      setCouncilLlmState(councilOk ? "connected" : "disconnected");
+      setCoaLlmState(coaOllamaOk && coaLlmOk ? "connected" : "disconnected");
+    } catch {
+      setCouncilLlmState("disconnected");
+      setCoaLlmState("disconnected");
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshLlmConnectionStatus();
+    const id = window.setInterval(() => {
+      void refreshLlmConnectionStatus();
+    }, 30000);
+    return () => window.clearInterval(id);
+  }, [refreshLlmConnectionStatus]);
+
+  const testLlmStatus = useCallback(async () => {
+    setLoadStatus("loading");
+    setLastError(null);
+    setResult({ kind: "loading", message: "جاري اختبار جاهزية LLM..." });
+
+    try {
+      const [integrationsRes, coaOllamaRes, coaLlmRes] = await Promise.all([
+        fetch("/api/integrations"),
+        fetch("/coa-api/health/ollama"),
+        fetch("/coa-api/health/llm"),
+      ]);
+
+      const [integrationsBody, coaOllamaBody, coaLlmBody] = await Promise.all([
+        parseJsonSafe(integrationsRes),
+        parseJsonSafe(coaOllamaRes),
+        parseJsonSafe(coaLlmRes),
+      ]);
+
+      const councilLlmOk =
+        integrationsRes.ok &&
+        integrationsBody &&
+        typeof integrationsBody === "object" &&
+        (integrationsBody as JsonRecord).council &&
+        typeof (integrationsBody as JsonRecord).council === "object" &&
+        ((integrationsBody as JsonRecord).council as JsonRecord).fastapi === true;
+
+      const coaOllamaOk =
+        coaOllamaRes.ok &&
+        coaOllamaBody &&
+        typeof coaOllamaBody === "object" &&
+        (coaOllamaBody as JsonRecord).ok !== false;
+
+      const coaLlmOk =
+        coaLlmRes.ok &&
+        coaLlmBody &&
+        typeof coaLlmBody === "object" &&
+        (coaLlmBody as JsonRecord).ok !== false;
+
+      const allOk = councilLlmOk && coaOllamaOk && coaLlmOk;
+      setCouncilLlmState(councilLlmOk ? "connected" : "disconnected");
+      setCoaLlmState(coaOllamaOk && coaLlmOk ? "connected" : "disconnected");
+      setLoadStatus(allOk ? "idle" : "error");
+      if (!allOk) {
+        setLastError("بعض خدمات LLM غير جاهزة.");
+      }
+      setResult({
+        kind: allOk ? "success" : "error",
+        data: {
+          council_llm: councilLlmOk ? "جاهز" : "غير جاهز",
+          coa_ollama: coaOllamaOk ? "جاهز" : "غير جاهز",
+          coa_llm: coaLlmOk ? "جاهز" : "غير جاهز",
+          integrations: integrationsBody,
+          coa_ollama_details: coaOllamaBody,
+          coa_llm_details: coaLlmBody,
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setLoadStatus("error");
+      setLastError(msg);
+      setCouncilLlmState("disconnected");
+      setCoaLlmState("disconnected");
+      setResult({
+        kind: "error",
+        data: { error: "تعذر اختبار LLM", details: msg },
+      });
+    }
+  }, []);
+
+  const llmPillKind = (state: LlmConnectionState): "ok" | "warn" | "danger" => {
+    if (state === "connected") return "ok";
+    if (state === "checking") return "warn";
+    return "danger";
+  };
+
+  const llmPillLabel = (prefix: string, state: LlmConnectionState): string => {
+    if (state === "connected") return `${prefix}: متصل`;
+    if (state === "checking") return `${prefix}: جارٍ التحقق`;
+    return `${prefix}: غير متصل`;
+  };
+
   return (
     <div className="app">
       <header className="brand-bar">
@@ -186,6 +398,14 @@ export default function App() {
         <div className="brand-status" aria-label="خدمات المنصة">
           <StatusPill kind="ok" label="FastAPI 8765" />
           <StatusPill kind="ok" label="COA 5050" />
+          <StatusPill
+            kind={llmPillKind(councilLlmState)}
+            label={llmPillLabel("LLM Council", councilLlmState)}
+          />
+          <StatusPill
+            kind={llmPillKind(coaLlmState)}
+            label={llmPillLabel("LLM COA", coaLlmState)}
+          />
         </div>
       </header>
 
@@ -226,11 +446,13 @@ export default function App() {
               type="button"
               className="btn primary"
               disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("فحص النظام (Council)", () =>
+              onClick={async () => {
+                const ready = await ensureLlmReady("council");
+                if (!ready) return;
+                await runJson("فحص النظام (Council)", () =>
                   fetch("/api/scan-system", { method: "POST" })
-                )
-              }
+                );
+              }}
             >
               فحص النظام — scan-system
             </button>
@@ -376,8 +598,10 @@ export default function App() {
               type="button"
               className="btn primary"
               disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("COA full scan", () =>
+              onClick={async () => {
+                const ready = await ensureLlmReady("coa");
+                if (!ready) return;
+                await runJson("COA full scan", () =>
                   fetch("/coa-api/scan", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -387,8 +611,8 @@ export default function App() {
                       presentation_demo: coaPresentationDemo,
                     }),
                   })
-                )
-              }
+                );
+              }}
             >
               فحص COA (POST /scan)
             </button>
@@ -503,6 +727,14 @@ export default function App() {
               }
             >
               /api/coa/health-proxy
+            </button>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={loadStatus === "loading"}
+              onClick={testLlmStatus}
+            >
+              اختبار LLM
             </button>
           </div>
         </section>
