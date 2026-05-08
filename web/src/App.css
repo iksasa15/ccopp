@@ -343,31 +343,74 @@
   }
 }
 
-.json-out {
-  margin: 0;
+.result-card {
   padding: 1rem 1.1rem 1.25rem;
+}
+
+.result-card--ok {
+  background: linear-gradient(180deg, rgba(52, 211, 153, 0.06), rgba(15, 22, 35, 0));
+}
+
+.result-card--danger {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.06), rgba(15, 22, 35, 0));
+}
+
+.result-card--neutral {
+  background: linear-gradient(180deg, rgba(34, 211, 238, 0.06), rgba(15, 22, 35, 0));
+}
+
+.result-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
   max-height: min(520px, 55vh);
   overflow: auto;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 0.78rem;
-  line-height: 1.5;
-  color: #a8c4e8;
+  padding-inline-end: 0.2rem;
   scrollbar-color: rgba(34, 211, 238, 0.45) var(--surface-2);
   scrollbar-width: thin;
 }
 
-.json-out::-webkit-scrollbar {
+.result-grid::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.json-out::-webkit-scrollbar-track {
+.result-grid::-webkit-scrollbar-track {
   background: var(--surface-2);
 }
 
-.json-out::-webkit-scrollbar-thumb {
+.result-grid::-webkit-scrollbar-thumb {
   background: rgba(34, 211, 238, 0.35);
   border-radius: 6px;
+}
+
+.result-item {
+  border: 1px solid var(--border);
+  background: rgba(6, 10, 19, 0.55);
+  border-radius: 10px;
+  padding: 0.65rem 0.7rem;
+}
+
+.result-item h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  color: var(--accent);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.result-item p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #d1e7ff;
+  word-break: break-word;
 }
 
 .app-footer {

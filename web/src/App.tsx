@@ -1,10 +1,15 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { BrandLogo, StatusPill } from "./Brand";
 import "./App.css";
 
 type LoadStatus = "idle" | "loading" | "error";
 type MainTab = "council" | "coa" | "status";
 type JsonRecord = Record<string, unknown>;
+type ResultState =
+  | { kind: "idle"; message: string }
+  | { kind: "loading"; message: string }
+  | { kind: "success"; data: unknown }
+  | { kind: "error"; data: unknown };
 
 async function parseJsonSafe(res: Response): Promise<unknown> {
   const text = await res.text();
@@ -34,7 +39,10 @@ function getKnownCoaHint(body: unknown): string | null {
 export default function App() {
   const [mainTab, setMainTab] = useState<MainTab>("council");
   const [archivePath, setArchivePath] = useState("");
-  const [output, setOutput] = useState<string>("");
+  const [result, setResult] = useState<ResultState>({
+    kind: "idle",
+    message: "اختر تبويباً ثم نفّذ إجراءً",
+  });
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
 
@@ -43,14 +51,26 @@ export default function App() {
   const [coaPresentationDemo, setCoaPresentationDemo] = useState(false);
 
   const showResult = useCallback((data: unknown) => {
-    setOutput(JSON.stringify(data, null, 2));
+    setResult((prev) => ({
+      kind: prev.kind === "error" ? "error" : "success",
+      data,
+    }));
   }, []);
+
+  const resultEntries = useMemo(() => {
+    if (result.kind !== "success" && result.kind !== "error") return [];
+    if (!result.data || typeof result.data !== "object") return [];
+    return Object.entries(result.data as JsonRecord);
+  }, [result]);
+
+  const resultVariant =
+    result.kind === "error" ? "danger" : result.kind === "success" ? "ok" : "neutral";
 
   const runJson = useCallback(
     async (label: string, fn: () => Promise<Response>, hint?: string) => {
       setLoadStatus("loading");
       setLastError(null);
-      setOutput(`… جاري التنفيذ: ${label}`);
+      setResult({ kind: "loading", message: `جاري التنفيذ: ${label}` });
       try {
         const res = await fn();
         const body = await parseJsonSafe(res);
@@ -58,6 +78,10 @@ export default function App() {
           setLoadStatus("error");
           const knownHint = getKnownCoaHint(body);
           setLastError(knownHint ?? `${res.status} ${res.statusText}`);
+          setResult({
+            kind: "error",
+            data: knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body,
+          });
           showResult(
             knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body
           );
@@ -84,7 +108,7 @@ export default function App() {
     async (label: string, url: string) => {
       setLoadStatus("loading");
       setLastError(null);
-      setOutput(`… تنزيل: ${label}`);
+      setResult({ kind: "loading", message: `جاري تنزيل: ${label}` });
       try {
         const res = await fetch(url);
         if (!res.ok) {
@@ -92,6 +116,10 @@ export default function App() {
           setLoadStatus("error");
           const knownHint = getKnownCoaHint(body);
           setLastError(knownHint ?? `${res.status} ${res.statusText}`);
+          setResult({
+            kind: "error",
+            data: knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body,
+          });
           showResult(
             knownHint ? { ...(body as JsonRecord), user_hint: knownHint } : body
           );
@@ -117,6 +145,7 @@ export default function App() {
         setLoadStatus("error");
         const msg = e instanceof Error ? e.message : String(e);
         setLastError(msg);
+        setResult({ kind: "error", data: { error: msg } });
         showResult({ error: msg });
       }
     },
@@ -476,14 +505,37 @@ export default function App() {
 
       <section className="output-panel">
         <div className="output-head">
-          <span>النتيجة (JSON أو ملخص تنزيل)</span>
+          <span>نتيجة العملية</span>
           {loadStatus === "loading" && (
             <span className="pulse">جاري التحميل…</span>
           )}
         </div>
-        <pre className="json-out" dir="ltr">
-          {output || "// اختر تبويباً ثم نفّذ إجراءً"}
-        </pre>
+        <div className={`result-card result-card--${resultVariant}`}>
+          {(result.kind === "idle" || result.kind === "loading") && (
+            <p className="result-empty">{result.message}</p>
+          )}
+
+          {(result.kind === "success" || result.kind === "error") &&
+            resultEntries.length > 0 && (
+              <div className="result-grid">
+                {resultEntries.map(([key, value]) => (
+                  <article className="result-item" key={key}>
+                    <h4>{key}</h4>
+                    <p>{typeof value === "string" ? value : JSON.stringify(value)}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+
+          {(result.kind === "success" || result.kind === "error") &&
+            resultEntries.length === 0 && (
+              <p className="result-empty">
+                {typeof result.data === "string"
+                  ? result.data
+                  : JSON.stringify(result.data)}
+              </p>
+            )}
+        </div>
       </section>
 
       <footer className="app-footer">
