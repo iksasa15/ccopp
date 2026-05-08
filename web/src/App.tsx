@@ -740,7 +740,7 @@ export default function App() {
       <header className="topbar">
         <div className="topbar__brand">
           <BrandLogo size={32} />
-          <h1 className="topbar__title">Nexus Shield</h1>
+          <h1 className="topbar__title">COA</h1>
         </div>
         <div className="topbar__status">
           <span
