@@ -181,12 +181,6 @@ export default function App() {
             <p className="brand-tag">
               منصة SOC محلية متعددة الوكلاء — Local Multi-Agent SOC
             </p>
-            <p className="subtitle brand-sub">
-              <strong>Council</strong> عبر <code>/api</code> → FastAPI{" "}
-              <code>8765</code>. <strong>COA</strong> عبر <code>/coa-api</code> → Flask{" "}
-              <code>5050</code>. شغّل <code>make dev</code> أو{" "}
-              <code>bash scripts/start_merged.sh</code>.
-            </p>
           </div>
         </div>
         <div className="brand-status" aria-label="خدمات المنصة">
