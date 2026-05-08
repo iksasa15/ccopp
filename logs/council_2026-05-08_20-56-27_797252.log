@@ -35,3 +35,73 @@
 2026-05-08 21:15:15.322 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
 2026-05-08 21:15:15.323 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
 2026-05-08 21:15:15.343 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 673 baselines to data/baseline.json
+2026-05-08 21:18:03.758 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:18:04.326 | INFO     | core.council_graph:entry_node:90 - Council scan started: 44ad8d95-f7ab-4d60-a488-de146afe3846
+2026-05-08 21:18:04.560 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:18:04.560 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:18:04.560 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:18:04.561 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:18:04.594 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:18:10.956 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:18:11.522 | INFO     | core.council_graph:entry_node:90 - Council scan started: b799c6db-0454-4a67-978d-f0aad372d95f
+2026-05-08 21:18:11.731 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:18:11.731 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:18:11.731 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:18:11.732 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:18:11.756 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:18:19.572 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:18:20.126 | INFO     | core.council_graph:entry_node:90 - Council scan started: a8428468-b902-4c3f-910a-e9b9a051a95e
+2026-05-08 21:18:20.333 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:18:20.333 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:18:20.333 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:18:20.334 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:18:20.361 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:18:26.791 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:18:27.346 | INFO     | core.council_graph:entry_node:90 - Council scan started: a6dab3e7-394c-455c-b7fa-35af1f8f72fa
+2026-05-08 21:18:27.543 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:18:27.543 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:18:27.543 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:18:27.544 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:18:27.566 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:18:41.466 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:18:42.024 | INFO     | core.council_graph:entry_node:90 - Council scan started: 903d23ea-4edc-4fac-ad7b-2ae5aafa6d41
+2026-05-08 21:18:42.219 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:18:42.220 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:18:42.220 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:18:42.220 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:18:42.248 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:18:54.232 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:18:54.781 | INFO     | core.council_graph:entry_node:90 - Council scan started: 38d58539-da54-4887-a5e0-3bd19b121e09
+2026-05-08 21:18:54.976 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:18:54.976 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:18:54.976 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:18:54.977 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:18:55.002 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:24:13.183 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:24:13.724 | INFO     | core.council_graph:entry_node:90 - Council scan started: f12aac5a-80cd-4e99-be34-10f34f814f4a
+2026-05-08 21:24:13.948 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:24:13.949 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:24:13.949 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:24:13.950 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:24:13.975 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:24:17.511 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:24:18.064 | INFO     | core.council_graph:entry_node:90 - Council scan started: 6f917b36-af7c-4186-b292-155ca7dd80c2
+2026-05-08 21:24:18.261 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:24:18.261 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:24:18.261 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:24:18.262 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:24:18.290 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:24:26.706 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:24:27.269 | INFO     | core.council_graph:entry_node:90 - Council scan started: 6aef184f-f270-41e6-953d-f8dc7ac980f2
+2026-05-08 21:24:27.470 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:24:27.470 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:24:27.470 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:24:27.471 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:24:27.496 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
+2026-05-08 21:24:30.407 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:24:30.968 | INFO     | core.council_graph:entry_node:90 - Council scan started: 204b0546-1ed1-4e42-8be7-1e2e03a8f987
+2026-05-08 21:24:31.165 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:24:31.166 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:24:31.166 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:24:31.167 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:24:31.193 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 675 baselines to data/baseline.json
