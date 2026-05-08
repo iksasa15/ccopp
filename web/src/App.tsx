@@ -3,7 +3,7 @@ import { BrandLogo, StatusPill } from "./Brand";
 import "./App.css";
 
 type LoadStatus = "idle" | "loading" | "error";
-type MainTab = "home" | "council" | "coa";
+type MainTab = "home" | "council_coa";
 type JsonRecord = Record<string, unknown>;
 type ResultState =
   | { kind: "idle"; message: string }
@@ -59,7 +59,7 @@ export default function App() {
   const [archivePath, setArchivePath] = useState("");
   const [result, setResult] = useState<ResultState>({
     kind: "idle",
-    message: "اختر تبويباً ثم نفّذ إجراءً",
+    message: "نفّذ فحصاً من الأعلى أو من تبويب Council + COA",
   });
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
@@ -471,7 +471,7 @@ export default function App() {
               onClick={() => setCouncilScanMode("quick")}
               disabled={loadStatus === "loading"}
             >
-              فحص سريع (10 ثوانٍ)
+              فحص سريع
             </button>
             <button
               type="button"
@@ -514,20 +514,11 @@ export default function App() {
         <button
           type="button"
           role="tab"
-          aria-selected={mainTab === "council"}
-          className={`tab ${mainTab === "council" ? "active" : ""}`}
-          onClick={() => setMainTab("council")}
+          aria-selected={mainTab === "council_coa"}
+          className={`tab ${mainTab === "council_coa" ? "active" : ""}`}
+          onClick={() => setMainTab("council_coa")}
         >
-          Council
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mainTab === "coa"}
-          className={`tab ${mainTab === "coa" ? "active" : ""}`}
-          onClick={() => setMainTab("coa")}
-        >
-          COA
+          Council + COA
         </button>
       </nav>
 
@@ -640,265 +631,265 @@ export default function App() {
         </section>
       )}
 
-      {mainTab === "council" && (
-        <section className="action-card">
-          <div className="panel-head">
-            <h2 className="panel-title">Council — أوامر متقدمة</h2>
-            <p className="panel-meta">للعمليات اليدوية والتدقيقات الإضافية</p>
-          </div>
-          <section className="actions">
-            <button
-              type="button"
-              className="btn primary"
-              disabled={loadStatus === "loading"}
-              onClick={startCouncilScan}
-            >
-              بدء الفحص الحالي
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("verify-audit", () => fetch("/api/verify-audit"))
-              }
-            >
-              verify-audit
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("baseline-stats", () => fetch("/api/baseline-stats"))
-              }
-            >
-              baseline-stats
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("list-quarantine", () => fetch("/api/list-quarantine"))
-              }
-            >
-              list-quarantine
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("مساعدة الأوامر", () => fetch("/api/commands"))
-              }
-            >
-              أوامر API (مساعدة)
-            </button>
-          </section>
-          <section className="archive-row">
-            <label htmlFor="archive-path">مسار الأرشيف — scan-archive</label>
-            <div className="archive-input">
-              <input
-                id="archive-path"
-                type="text"
-                placeholder="/path/to/archive.zip"
-                value={archivePath}
-                onChange={(e) => setArchivePath(e.target.value)}
-                dir="ltr"
-              />
+      {mainTab === "council_coa" && (
+        <div className="unified-engines">
+          <section className="action-card unified-engines__panel">
+            <div className="panel-head">
+              <h2 className="panel-title">Council (FastAPI)</h2>
+              <p className="panel-meta">فحص النظام، التدقيق، والأرشيف</p>
+            </div>
+            <section className="actions">
               <button
                 type="button"
                 className="btn primary"
-                disabled={loadStatus === "loading" || !archivePath.trim()}
+                disabled={loadStatus === "loading"}
+                onClick={startCouncilScan}
+              >
+                بدء فحص Council (نفس وضع الفحص أعلاه)
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
                 onClick={() =>
-                  runJson("فحص الأرشيف", () =>
-                    fetch("/api/scan-archive", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ path: archivePath.trim() }),
-                    })
+                  runJson("verify-audit", () => fetch("/api/verify-audit"))
+                }
+              >
+                verify-audit
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("baseline-stats", () => fetch("/api/baseline-stats"))
+                }
+              >
+                baseline-stats
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("list-quarantine", () => fetch("/api/list-quarantine"))
+                }
+              >
+                list-quarantine
+              </button>
+              <button
+                type="button"
+                className="btn ghost"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("مساعدة الأوامر", () => fetch("/api/commands"))
+                }
+              >
+                أوامر API (مساعدة)
+              </button>
+            </section>
+            <section className="archive-row">
+              <label htmlFor="archive-path">مسار الأرشيف — scan-archive</label>
+              <div className="archive-input">
+                <input
+                  id="archive-path"
+                  type="text"
+                  placeholder="/path/to/archive.zip"
+                  value={archivePath}
+                  onChange={(e) => setArchivePath(e.target.value)}
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={loadStatus === "loading" || !archivePath.trim()}
+                  onClick={() =>
+                    runJson("فحص الأرشيف", () =>
+                      fetch("/api/scan-archive", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ path: archivePath.trim() }),
+                      })
+                    )
+                  }
+                >
+                  فحص الأرشيف
+                </button>
+              </div>
+            </section>
+          </section>
+
+          <section className="coa-panel action-card unified-engines__panel">
+            <div className="panel-head">
+              <h2 className="panel-title">COA (Flask)</h2>
+              <p className="panel-meta">فحص متقدم، MITRE، OT، وتقارير</p>
+            </div>
+            <p className="coa-hint">
+              يتطلب تشغيل <code>web_api.py</code> على المنفذ <code>5050</code>. بعد{" "}
+              <strong>فحص COA</strong> يمكن جلب defense / MITRE / OT من آخر مسح، أو تنزيل التقارير.
+            </p>
+            <div className="coa-options">
+              <label className="chk">
+                <input
+                  type="checkbox"
+                  checked={coaDryRun}
+                  onChange={(e) => setCoaDryRun(e.target.checked)}
+                />
+                dry_run
+              </label>
+              <label className="chk">
+                <input
+                  type="checkbox"
+                  checked={coaUseCouncil}
+                  onChange={(e) => setCoaUseCouncil(e.target.checked)}
+                />
+                use_council (CrewAI — أبطأ)
+              </label>
+              <label className="chk">
+                <input
+                  type="checkbox"
+                  checked={coaPresentationDemo}
+                  onChange={(e) => setCoaPresentationDemo(e.target.checked)}
+                />
+                presentation_demo (OT وهمي)
+              </label>
+            </div>
+            <div className="actions">
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("COA health", () => fetch("/coa-api/health"), "شغّل COA Flask على 5050")
+                }
+              >
+                COA /api/health
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("Ollama diagnose", () =>
+                    fetch("/coa-api/health/ollama")
                   )
                 }
               >
-                فحص الأرشيف
+                health/ollama
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("LLM diagnose", () => fetch("/coa-api/health/llm"))
+                }
+              >
+                health/llm
+              </button>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={loadStatus === "loading"}
+                onClick={async () => {
+                  const ready = await ensureLlmReady("coa");
+                  if (!ready) return;
+                  await runJson("COA full scan", () =>
+                    fetch("/coa-api/scan", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        dry_run: coaDryRun,
+                        use_council: coaUseCouncil,
+                        presentation_demo: coaPresentationDemo,
+                      }),
+                    })
+                  );
+                }}
+              >
+                فحص COA (POST /scan)
+              </button>
+            </div>
+            <div className="actions">
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("آخر defense-context", () =>
+                    fetch("/coa-api/last/defense-context")
+                  )
+                }
+              >
+                last/defense-context
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("آخر mitre-deep", () => fetch("/coa-api/last/mitre-deep"))
+                }
+              >
+                last/mitre-deep
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("آخر ot-ics", () => fetch("/coa-api/last/ot-ics"))
+                }
+              >
+                last/ot-ics
+              </button>
+            </div>
+            <div className="actions">
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runDownload("تقرير TXT", "/coa-api/reports/txt")
+                }
+              >
+                تنزيل reports/txt
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runDownload("تقرير HTML", "/coa-api/reports/html")
+                }
+              >
+                تنزيل reports/html
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runDownload("incident", "/coa-api/reports/incident")
+                }
+              >
+                تنزيل reports/incident
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={loadStatus === "loading"}
+                onClick={() =>
+                  runJson("mitre-navigator.json", () =>
+                    fetch("/coa-api/reports/mitre-navigator.json")
+                  )
+                }
+              >
+                reports/mitre-navigator.json
               </button>
             </div>
           </section>
-        </section>
-      )}
-
-      {mainTab === "coa" && (
-        <section className="coa-panel action-card">
-          <div className="panel-head">
-            <h2 className="panel-title">أدوات COA</h2>
-            <p className="panel-meta">الفحص المتقدم والتقارير والتحليلات العميقة</p>
-          </div>
-          <p className="coa-hint">
-            يتطلب تشغيل <code>web_api.py</code> على المنفذ <code>5050</code>. بعد{" "}
-            <strong>فحص COA</strong> يمكن جلب defense / MITRE / OT من آخر مسح، أو تنزيل التقارير.
-          </p>
-          <div className="coa-options">
-            <label className="chk">
-              <input
-                type="checkbox"
-                checked={coaDryRun}
-                onChange={(e) => setCoaDryRun(e.target.checked)}
-              />
-              dry_run
-            </label>
-            <label className="chk">
-              <input
-                type="checkbox"
-                checked={coaUseCouncil}
-                onChange={(e) => setCoaUseCouncil(e.target.checked)}
-              />
-              use_council (CrewAI — أبطأ)
-            </label>
-            <label className="chk">
-              <input
-                type="checkbox"
-                checked={coaPresentationDemo}
-                onChange={(e) => setCoaPresentationDemo(e.target.checked)}
-              />
-              presentation_demo (OT وهمي)
-            </label>
-          </div>
-          <div className="actions">
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("COA health", () => fetch("/coa-api/health"), "شغّل COA Flask على 5050")
-              }
-            >
-              COA /api/health
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("Ollama diagnose", () =>
-                  fetch("/coa-api/health/ollama")
-                )
-              }
-            >
-              health/ollama
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("LLM diagnose", () => fetch("/coa-api/health/llm"))
-              }
-            >
-              health/llm
-            </button>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={loadStatus === "loading"}
-              onClick={async () => {
-                const ready = await ensureLlmReady("coa");
-                if (!ready) return;
-                await runJson("COA full scan", () =>
-                  fetch("/coa-api/scan", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      dry_run: coaDryRun,
-                      use_council: coaUseCouncil,
-                      presentation_demo: coaPresentationDemo,
-                    }),
-                  })
-                );
-              }}
-            >
-              فحص COA (POST /scan)
-            </button>
-          </div>
-          <div className="actions">
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("آخر defense-context", () =>
-                  fetch("/coa-api/last/defense-context")
-                )
-              }
-            >
-              last/defense-context
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("آخر mitre-deep", () => fetch("/coa-api/last/mitre-deep"))
-              }
-            >
-              last/mitre-deep
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("آخر ot-ics", () => fetch("/coa-api/last/ot-ics"))
-              }
-            >
-              last/ot-ics
-            </button>
-          </div>
-          <div className="actions">
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runDownload("تقرير TXT", "/coa-api/reports/txt")
-              }
-            >
-              تنزيل reports/txt
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runDownload("تقرير HTML", "/coa-api/reports/html")
-              }
-            >
-              تنزيل reports/html
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runDownload("incident", "/coa-api/reports/incident")
-              }
-            >
-              تنزيل reports/incident
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={loadStatus === "loading"}
-              onClick={() =>
-                runJson("mitre-navigator.json", () =>
-                  fetch("/coa-api/reports/mitre-navigator.json")
-                )
-              }
-            >
-              reports/mitre-navigator.json
-            </button>
-          </div>
-        </section>
+        </div>
       )}
 
       {lastError && (

@@ -1,0 +1,9 @@
+2026-05-08 20:56:27.969 | INFO     | intelligence.behavioral_baseline:_load:253 - Loaded 668 baselines from data/baseline.json
+2026-05-08 20:56:28.144 | INFO     | run:initialize:152 - Council system initialized
+2026-05-08 20:59:24.262 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 20:59:24.829 | INFO     | core.council_graph:entry_node:90 - Council scan started: 7a52d730-ebf4-4bbb-a254-f6f6d7738aae
+2026-05-08 20:59:25.034 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 20:59:25.034 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 20:59:25.034 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 20:59:25.036 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 20:59:25.086 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 673 baselines to data/baseline.json
