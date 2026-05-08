@@ -396,6 +396,13 @@
   background: rgba(6, 10, 19, 0.55);
   border-radius: 10px;
   padding: 0.65rem 0.7rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.result-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(34, 211, 238, 0.4);
+  box-shadow: 0 10px 20px rgba(4, 16, 24, 0.35);
 }
 
 .result-item h4 {
@@ -411,6 +418,99 @@
   line-height: 1.55;
   color: #d1e7ff;
   word-break: break-word;
+}
+
+.result-list {
+  margin: 0;
+  padding-inline-start: 1rem;
+  display: grid;
+  gap: 0.25rem;
+  color: #d1e7ff;
+  font-size: 0.84rem;
+}
+
+.result-subgrid {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.result-subgrid p {
+  margin: 0;
+}
+
+.threats-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.threat-item {
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: rgba(10, 17, 30, 0.7);
+  display: grid;
+  gap: 0.35rem;
+}
+
+.threat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.threat-title {
+  color: #7ee7f8 !important;
+  font-weight: 700;
+  margin: 0 !important;
+}
+
+.threat-signals {
+  color: #9fd9ff !important;
+  font-size: 0.8rem !important;
+}
+
+.severity-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.severity-chip.is-critical {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.severity-chip.is-high {
+  color: #fdba74;
+  background: rgba(249, 115, 22, 0.14);
+  border-color: rgba(249, 115, 22, 0.36);
+}
+
+.severity-chip.is-medium {
+  color: #fde68a;
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(234, 179, 8, 0.34);
+}
+
+.severity-chip.is-low {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.34);
+}
+
+.severity-chip.is-neutral {
+  color: #bae6fd;
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.34);
 }
 
 .app-footer {

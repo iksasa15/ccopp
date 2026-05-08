@@ -11,6 +11,23 @@ type ResultState =
   | { kind: "success"; data: unknown }
   | { kind: "error"; data: unknown };
 
+function formatPrimitive(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "نعم" : "لا";
+  if (typeof value === "number") return value.toLocaleString("en-US");
+  if (typeof value === "string") return value;
+  return "بيانات مركبة";
+}
+
+function severityClass(value: unknown): string {
+  const v = String(value ?? "").toLowerCase();
+  if (v.includes("critical")) return "is-critical";
+  if (v.includes("high")) return "is-high";
+  if (v.includes("medium")) return "is-medium";
+  if (v.includes("low")) return "is-low";
+  return "is-neutral";
+}
+
 async function parseJsonSafe(res: Response): Promise<unknown> {
   const text = await res.text();
   if (!text) return null;
@@ -521,7 +538,55 @@ export default function App() {
                 {resultEntries.map(([key, value]) => (
                   <article className="result-item" key={key}>
                     <h4>{key}</h4>
-                    <p>{typeof value === "string" ? value : JSON.stringify(value)}</p>
+                    {key === "threats" && Array.isArray(value) ? (
+                      value.length > 0 ? (
+                        <div className="threats-list">
+                          {value.map((threat, idx) => {
+                            const t = (threat ?? {}) as JsonRecord;
+                            const signals = Array.isArray(t.signals) ? t.signals : [];
+                            return (
+                              <div className="threat-item" key={`${String(t.source)}-${idx}`}>
+                                <div className="threat-head">
+                                  <p className="threat-title">{formatPrimitive(t.type)}</p>
+                                  <span className={`severity-chip ${severityClass(t.severity)}`}>
+                                    {formatPrimitive(t.severity)}
+                                  </span>
+                                </div>
+                                <p>{formatPrimitive(t.source)}</p>
+                                <p>{formatPrimitive(t.details)}</p>
+                                {signals.length > 0 && (
+                                  <p className="threat-signals">
+                                    الإشارات: {signals.map((s) => String(s)).join(" · ")}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p>لا توجد تهديدات.</p>
+                      )
+                    ) : Array.isArray(value) ? (
+                      value.length > 0 ? (
+                        <ul className="result-list">
+                          {value.map((item, idx) => (
+                            <li key={`${key}-${idx}`}>{formatPrimitive(item)}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>—</p>
+                      )
+                    ) : typeof value === "object" && value !== null ? (
+                      <div className="result-subgrid">
+                        {Object.entries(value as JsonRecord).map(([subKey, subValue]) => (
+                          <p key={`${key}-${subKey}`}>
+                            <strong>{subKey}:</strong> {formatPrimitive(subValue)}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>{formatPrimitive(value)}</p>
+                    )}
                   </article>
                 ))}
               </div>
@@ -530,9 +595,7 @@ export default function App() {
           {(result.kind === "success" || result.kind === "error") &&
             resultEntries.length === 0 && (
               <p className="result-empty">
-                {typeof result.data === "string"
-                  ? result.data
-                  : JSON.stringify(result.data)}
+                {formatPrimitive(result.data)}
               </p>
             )}
         </div>
