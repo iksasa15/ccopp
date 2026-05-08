@@ -7,3 +7,31 @@
 2026-05-08 20:59:25.034 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
 2026-05-08 20:59:25.036 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
 2026-05-08 20:59:25.086 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 673 baselines to data/baseline.json
+2026-05-08 21:14:06.347 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:14:06.911 | INFO     | core.council_graph:entry_node:90 - Council scan started: ea9f217a-5ec7-42bd-9837-fc818ef84bc5
+2026-05-08 21:14:07.113 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:14:07.113 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:14:07.114 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:14:07.114 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:14:07.137 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 673 baselines to data/baseline.json
+2026-05-08 21:14:16.585 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:14:17.153 | INFO     | core.council_graph:entry_node:90 - Council scan started: 75f2ff82-9158-46e5-a3d5-1d2d245270fd
+2026-05-08 21:14:17.351 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:14:17.351 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:14:17.351 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:14:17.352 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:14:17.371 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 673 baselines to data/baseline.json
+2026-05-08 21:15:09.463 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:15:10.031 | INFO     | core.council_graph:entry_node:90 - Council scan started: 2c975ca9-7581-40e2-88d4-e7ed63f489a8
+2026-05-08 21:15:10.227 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:15:10.228 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:15:10.228 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:15:10.229 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:15:10.253 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 673 baselines to data/baseline.json
+2026-05-08 21:15:14.589 | WARNING  | tools.system_probe:warn_if_not_admin:54 - Not running as root. Limited process visibility on Linux.
+2026-05-08 21:15:15.145 | INFO     | core.council_graph:entry_node:90 - Council scan started: 67384273-65a8-4241-b43c-9348f4fbe684
+2026-05-08 21:15:15.322 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 21:15:15.322 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 21:15:15.322 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 21:15:15.323 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 21:15:15.343 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 673 baselines to data/baseline.json

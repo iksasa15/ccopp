@@ -66,7 +66,6 @@ export default function App() {
 
   const [coaDryRun, setCoaDryRun] = useState(true);
   const [coaUseCouncil, setCoaUseCouncil] = useState(false);
-  const [coaPresentationDemo, setCoaPresentationDemo] = useState(false);
   const [councilScanMode, setCouncilScanMode] = useState<"quick" | "deep">("deep");
   const [councilLlmState, setCouncilLlmState] =
     useState<LlmConnectionState>("checking");
@@ -169,10 +168,18 @@ export default function App() {
     result.kind === "error" ? "danger" : result.kind === "success" ? "ok" : "neutral";
 
   const runJson = useCallback(
-    async (label: string, fn: () => Promise<Response>, hint?: string) => {
+    async (
+      label: string,
+      fn: () => Promise<Response>,
+      hint?: string,
+      loadingMessage?: string
+    ) => {
       setLoadStatus("loading");
       setLastError(null);
-      setResult({ kind: "loading", message: `جاري التنفيذ: ${label}` });
+      setResult({
+        kind: "loading",
+        message: loadingMessage ?? `جاري التنفيذ: ${label}`,
+      });
       try {
         const res = await fn();
         const body = await parseJsonSafe(res);
@@ -419,6 +426,9 @@ export default function App() {
   }, [dashboardStats.score]);
 
   const startCouncilScan = useCallback(async () => {
+    setLoadStatus("loading");
+    setLastError(null);
+    setResult({ kind: "loading", message: "جاري الفحص…" });
     const ready = await ensureLlmReady("council");
     if (!ready) return;
     await runJson(
@@ -430,7 +440,9 @@ export default function App() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mode: councilScanMode }),
-        })
+        }),
+      undefined,
+      "جاري الفحص…"
     );
   }, [councilScanMode, ensureLlmReady, runJson]);
 
@@ -895,32 +907,30 @@ export default function App() {
                   />
                   use_council (CrewAI — أبطأ)
                 </label>
-                <label className="chk">
-                  <input
-                    type="checkbox"
-                    checked={coaPresentationDemo}
-                    onChange={(e) => setCoaPresentationDemo(e.target.checked)}
-                  />
-                  presentation_demo (OT وهمي)
-                </label>
               </div>
               <button
                 type="button"
                 className="btn primary"
                 disabled={loadStatus === "loading"}
                 onClick={async () => {
+                  setLoadStatus("loading");
+                  setLastError(null);
+                  setResult({ kind: "loading", message: "جاري الفحص…" });
                   const ready = await ensureLlmReady("coa");
                   if (!ready) return;
-                  await runJson("COA full scan", () =>
-                    fetch("/coa-api/scan", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        dry_run: coaDryRun,
-                        use_council: coaUseCouncil,
-                        presentation_demo: coaPresentationDemo,
+                  await runJson(
+                    "COA full scan",
+                    () =>
+                      fetch("/coa-api/scan", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          dry_run: coaDryRun,
+                          use_council: coaUseCouncil,
+                        }),
                       }),
-                    })
+                    undefined,
+                    "جاري الفحص…"
                   );
                 }}
               >
@@ -1027,7 +1037,9 @@ export default function App() {
         <div className="output-head">
           <span>نتيجة العملية</span>
           {loadStatus === "loading" && (
-            <span className="pulse">جاري التحميل…</span>
+            <span className="pulse">
+              {result.kind === "loading" ? result.message : "جاري التحميل…"}
+            </span>
           )}
         </div>
         <div className={`result-card result-card--${resultVariant}`}>
