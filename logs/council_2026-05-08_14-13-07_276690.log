@@ -21,3 +21,17 @@
 2026-05-08 14:21:27.939 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
 2026-05-08 14:21:27.939 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
 2026-05-08 14:21:27.951 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 624 baselines to data/baseline.json
+2026-05-08 14:40:11.663 | WARNING  | tools.system_probe:warn_if_not_admin:53 - Not running as root. Limited process visibility on Linux.
+2026-05-08 14:40:12.222 | INFO     | core.council_graph:entry_node:90 - Council scan started: eb3479ca-1e5b-4a2f-9809-e40007d2a2ff
+2026-05-08 14:40:12.417 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 14:40:12.417 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 14:40:12.417 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 14:40:12.418 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 14:40:12.431 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 651 baselines to data/baseline.json
+2026-05-08 15:11:19.245 | WARNING  | tools.system_probe:warn_if_not_admin:53 - Not running as root. Limited process visibility on Linux.
+2026-05-08 15:11:19.791 | INFO     | core.council_graph:entry_node:90 - Council scan started: 8766bcd1-a94d-4aa3-a44e-41ce939b37f5
+2026-05-08 15:11:19.970 | INFO     | agents.resource_warden:analyze_with_validation:132 - Resource Warden: no suspicious candidates after pre-filter
+2026-05-08 15:11:19.970 | DEBUG    | core.council_graph:cyber_analyst_node:126 - Cyber Analyst not configured, skipping
+2026-05-08 15:11:19.970 | DEBUG    | core.council_graph:traffic_observer_node:147 - Traffic Observer not configured, skipping
+2026-05-08 15:11:19.971 | INFO     | core.council_graph:cross_reference_node:189 - Cross-reference: 0 multi-agent PIDs, 0 multi-agent files
+2026-05-08 15:11:19.984 | INFO     | intelligence.behavioral_baseline:save:225 - Saved 662 baselines to data/baseline.json

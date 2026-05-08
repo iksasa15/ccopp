@@ -172,6 +172,7 @@ class ScanSystemOutcome:
     scan_id: str
     is_admin: bool
     decision: CouncilDecision | None = None
+    filesystem_scan: dict[str, Any] | None = None
     error: str | None = None
 
     def as_json(self) -> dict[str, Any]:
@@ -180,6 +181,7 @@ class ScanSystemOutcome:
             "scan_id": self.scan_id,
             "is_admin": self.is_admin,
             "error": self.error,
+            "filesystem_scan": self.filesystem_scan,
             "decision": self.decision.model_dump(mode="json") if self.decision else None,
         }
 
@@ -195,7 +197,7 @@ async def execute_scan_system(
     from agents.resource_warden import ResourceWarden
     from core.agent_registry import get_agent_registry
     from security.audit_log import AuditEvent
-    from tools.system_probe import warn_if_not_admin
+    from tools.system_probe import SystemProbe, warn_if_not_admin
 
     if is_admin is None:
         is_admin = warn_if_not_admin()
@@ -244,6 +246,13 @@ async def execute_scan_system(
     )
 
     try:
+        filesystem_scan: dict[str, Any] | None = None
+        try:
+            # Quick bounded filesystem check for suspicious executable/script drops.
+            filesystem_scan = SystemProbe(warm_cpu=False).scan_filesystem_quick()
+        except Exception as fs_err:
+            logger.warning(f"Filesystem quick scan failed: {fs_err}")
+
         try:
             with progress_ctx:
                 result = await system.graph.ainvoke(
@@ -268,7 +277,11 @@ async def execute_scan_system(
 
             system.baseline.save()
             return ScanSystemOutcome(
-                ok=True, scan_id=scan_id, is_admin=is_admin, decision=decision
+                ok=True,
+                scan_id=scan_id,
+                is_admin=is_admin,
+                decision=decision,
+                filesystem_scan=filesystem_scan,
             )
         except Exception as e:
             logger.exception(f"Scan failed: {e}")
@@ -278,7 +291,11 @@ async def execute_scan_system(
                 {"scan_id": scan_id, "error": str(e)},
             )
             return ScanSystemOutcome(
-                ok=False, scan_id=scan_id, is_admin=is_admin, error=str(e)
+                ok=False,
+                scan_id=scan_id,
+                is_admin=is_admin,
+                error=str(e),
+                filesystem_scan=filesystem_scan,
             )
     finally:
         registry.unregister(scan_id)

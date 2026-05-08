@@ -16,6 +16,7 @@ import platform
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import psutil
@@ -313,3 +314,109 @@ class SystemProbe:
                     "Network analysis will be limited."
                 )
         return connections
+
+    # ============================================================
+    # Quick filesystem scan (used by scan-system API)
+    # ============================================================
+
+    def scan_filesystem_quick(
+        self,
+        *,
+        max_files: int = 8000,
+        max_findings: int = 60,
+    ) -> dict[str, Any]:
+        """
+        Fast best-effort file scan across high-risk locations.
+        This is intentionally bounded to avoid long API latency.
+        """
+        roots = self._default_file_scan_roots()
+        suspicious_ext = {
+            ".exe", ".dll", ".scr", ".msi", ".bat", ".cmd", ".ps1", ".vbs",
+            ".js", ".jar", ".hta", ".sh", ".app", ".dylib",
+        }
+
+        findings: list[dict[str, Any]] = []
+        scanned_files = 0
+        skipped_roots: list[str] = []
+
+        for root in roots:
+            p = Path(root).expanduser()
+            if not p.exists():
+                skipped_roots.append(str(p))
+                continue
+
+            try:
+                for dirpath, _, filenames in os.walk(p):
+                    for name in filenames:
+                        scanned_files += 1
+                        if scanned_files > max_files:
+                            break
+
+                        full = Path(dirpath) / name
+                        ext = full.suffix.lower()
+                        if ext not in suspicious_ext:
+                            continue
+
+                        lowered = name.lower()
+                        signals: list[str] = []
+
+                        # Example: invoice.pdf.exe
+                        if any(
+                            lowered.endswith(f"{mid}{ext}")
+                            for mid in (".pdf", ".doc", ".docx", ".txt", ".jpg", ".png")
+                        ):
+                            signals.append("double_extension_disguise")
+
+                        if "temp" in str(full).lower() or "download" in str(full).lower():
+                            signals.append("exec_in_temp_or_downloads")
+
+                        if ext in {".ps1", ".vbs", ".js", ".hta"}:
+                            signals.append("script_dropper_extension")
+
+                        if not signals:
+                            continue
+
+                        findings.append(
+                            {
+                                "path": str(full),
+                                "extension": ext,
+                                "signals": signals,
+                                "recommended_action": "review_file",
+                            }
+                        )
+                        if len(findings) >= max_findings:
+                            break
+                    if scanned_files > max_files or len(findings) >= max_findings:
+                        break
+            except (PermissionError, OSError):
+                skipped_roots.append(str(p))
+                continue
+
+            if scanned_files > max_files or len(findings) >= max_findings:
+                break
+
+        return {
+            "enabled": True,
+            "roots": roots,
+            "scanned_files": scanned_files,
+            "max_files": max_files,
+            "findings_count": len(findings),
+            "findings": findings,
+            "skipped_roots": skipped_roots,
+        }
+
+    def _default_file_scan_roots(self) -> list[str]:
+        home = Path.home()
+        if os.name == "nt":
+            return [
+                os.environ.get("TEMP", r"C:\Windows\Temp"),
+                os.environ.get("APPDATA", str(home / "AppData" / "Roaming")),
+                str(home / "Downloads"),
+                r"C:\Users\Public",
+            ]
+        return [
+            "/tmp",
+            "/var/tmp",
+            str(home / "Downloads"),
+            str(home / "Library" / "LaunchAgents"),
+        ]
